@@ -14,7 +14,8 @@ public class UserNode implements Publisher, Consumer {
 
 
     @Override
-    public void pull(String topicName) {
+    //TODO: move pull to Broker
+    public void pull(String topicName) { //ask the broker for the message with the latest index in the user's
 
     }
 

@@ -10,6 +10,8 @@ public class Broker {
 
     ArrayList<UserNode> connectedUsers;
     HashMap<String, Topic> topics;
+    //HashMap<String, ArrayList<Value>> messageQueue; //messages to be sent <topicname, message>
+    //TODO:list of other brokers
 
     ServerSocket userServiceProviderSocket;
     ServerSocket brokerServiceProviderSocket;
@@ -24,6 +26,19 @@ public class Broker {
     }
 
     void init() {
+
+    }
+    public void pull(String topicName) { //update all subscribers of Topic("topicName")
+        Topic topic = topics.get(topicName);
+        for (int i = 0; i< topic.users.size(); i++){
+            int messageListSize ; // ask the user for the index of the latest message in the user's msgQueue on said topic
+            while (messageListSize < topic.values.size()){
+                Value msg = topic.values.get(messageListSize);//message to be delivered
+                //send msg to user
+                //ask for new messageListSize and repeat loop
+            }
+        }
+
 
     }
 
