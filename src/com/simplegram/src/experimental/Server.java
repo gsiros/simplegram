@@ -32,9 +32,6 @@ public class Server {
                 connections.add(handler);
                 thread.start();
             }
-
-
-
         } catch (Exception e){
             e.printStackTrace();
         }
@@ -94,15 +91,14 @@ public class Server {
             }
         }
 
-        private void receiveFile() throws Exception{//data tansfer with chunking
+        private void receiveFile() throws Exception{//data transfer with chunking
             int bytes = 0;
-
             long size = in.readLong();// read file size
             String title = in.readUTF();// read file name
             //String type = title.substring(title.lastIndexOf('.'+1));//determine data type
 
             FileOutputStream fileOutputStream = new FileOutputStream(title);
-            byte[] buffer = new byte[512*1024];
+            byte[] buffer = new byte[512*1024]; //512 * 2^10 (512KByte chunk size)
             while (size > 0 && (bytes = in.read(buffer, 0, (int)Math.min(buffer.length, size))) != -1) {
                 fileOutputStream.write(buffer,0,bytes);
                 size -= bytes;      // read upto file size
@@ -121,7 +117,6 @@ public class Server {
                 }catch (Exception e){
                     //
                 }
-
         }
     }
 

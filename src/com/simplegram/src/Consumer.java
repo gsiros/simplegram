@@ -7,5 +7,5 @@ public interface Consumer {
     *  topic value list with the latest changes.
     *
     * */
-    void pull(String topicName);
+    //void pull(String topicName);
 }

@@ -21,13 +21,9 @@ public class Broker {
 
     // init broker to become ready for
     // new connections with usernodes
-    public Broker(){
+    public Broker(){}
 
-    }
-
-    void init() {
-
-    }
+    void init(){}
 
 
     /*
@@ -51,7 +47,10 @@ public class Broker {
     // start accepting connections.
     void start(){
         try {
+
+            // User listening on port 4444
             userServiceProviderSocket = new ServerSocket(4444);
+            // Broker listening on port 4445
             brokerServiceProviderSocket = new ServerSocket(4445);
 
             while (true) {
@@ -65,7 +64,6 @@ public class Broker {
                 // TODO: HANDLE CONNECTIONS; PART 2
                 // Accept incoming connection FROM USERNODE.
                 userConnection = userServiceProviderSocket.accept();
-
                 Thread t = new ActionsForUser(userConnection);
                 t.start();
 
