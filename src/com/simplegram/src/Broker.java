@@ -8,16 +8,16 @@ import java.util.HashMap;
 
 public class Broker {
 
-    ArrayList<UserNode> connectedUsers;
-    HashMap<String, Topic> topics;
+    private ArrayList<UserNode> connectedUsers;
+    private HashMap<String, Topic> topics;
     //HashMap<String, ArrayList<Value>> messageQueue; //messages to be sent <topicname, message>
     //TODO:list of other brokers
 
-    ServerSocket userServiceProviderSocket;
-    ServerSocket brokerServiceProviderSocket;
+    private ServerSocket userServiceProviderSocket;
+    private ServerSocket brokerServiceProviderSocket;
 
-    Socket brokerConnection;
-    Socket userConnection;
+    private Socket brokerConnection;
+    private Socket userConnection;
 
     // init broker to become ready for
     // new connections with usernodes
@@ -26,21 +26,7 @@ public class Broker {
     void init(){}
 
 
-    /*
-    public void pull(String topicName) { //update all subscribers of Topic("topicName")
-        Topic topic = topics.get(topicName);
-        for (int i = 0; i< topic.users.size(); i++){
-            int messageListSize ; // ask the user for the index of the latest message in the user's msgQueue on said topic
-            while (messageListSize < topic.values.size()){
-                Value msg = topic.values.get(messageListSize);//message to be delivered
-                //send msg to user
-                //ask for new messageListSize and repeat loop
-            }
-        }
 
-
-    }
-    */
 
 
     // begin the main functionality,
@@ -87,4 +73,19 @@ public class Broker {
     public void removeTopic(String topicName) {
         topics.remove(topicName);
     }
+
+    public void pull(String topicName) { //update all subscribers of Topic("topicName")
+        Topic topic = topics.get(topicName);
+        for (UserNode usrNode : topic.getSubscribers()){
+            int lastMsgIndex = connectedUsers.get(connectedUsers.indexOf(usrNode)).getMessageLists().get(topicName).size(); // ask the user for the index of the latest message in the user's msgQueue on said topic
+            while (lastMsgIndex <= topic.getMessageQueue().size()){
+                Value msg = topic.getMessageQueue().get(lastMsgIndex);//message to be delivered
+                //send msg to user
+                //ask for new messageListSize and repeat loop
+            }
+        }
+
+
+    }
+
 }

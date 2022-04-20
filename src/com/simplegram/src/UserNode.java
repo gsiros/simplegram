@@ -8,7 +8,7 @@ import java.util.HashMap;
 public class UserNode {
 
     // <topicName , arraylist of values (msgs, etc)
-    HashMap<String, ArrayList<Value>> topics;
+    HashMap<String, ArrayList<Value>> messageLists;
 
     // The list of brokers that the node requires
     // in order to publish and consume data.
@@ -150,5 +150,9 @@ public class UserNode {
 
 
 
+    }
+
+    public HashMap<String, ArrayList<Value>> getMessageLists() {
+        return messageLists;
     }
 }

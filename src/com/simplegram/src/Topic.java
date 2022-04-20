@@ -3,8 +3,8 @@ package com.simplegram.src;
 import java.util.ArrayList;
 
 public class Topic {
-    ArrayList<UserNode> subscribers;
-    ArrayList<Value> messageQueue;
+    private ArrayList<UserNode> subscribers;
+    private ArrayList<Value> messageQueue;
 
     public Topic() {
         this.subscribers = new ArrayList<UserNode>();
