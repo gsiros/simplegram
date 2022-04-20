@@ -28,6 +28,9 @@ public class Broker {
     void init() {
 
     }
+
+
+    /*
     public void pull(String topicName) { //update all subscribers of Topic("topicName")
         Topic topic = topics.get(topicName);
         for (int i = 0; i< topic.users.size(); i++){
@@ -41,6 +44,8 @@ public class Broker {
 
 
     }
+    */
+
 
     // begin the main functionality,
     // start accepting connections.

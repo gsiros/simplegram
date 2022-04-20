@@ -1,4 +1,4 @@
-package com.simplegram.src.ecperimental;
+package com.simplegram.src.experimental;
 
 import java.io.*;
 import java.net.Socket;
