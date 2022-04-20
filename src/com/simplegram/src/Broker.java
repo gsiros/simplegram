@@ -78,5 +78,13 @@ public class Broker {
             }
         }
     }
+    
+    public void createTopic(String topicName) {
+        Topic topic = new Topic();
+        topics.put(topicName, topic);
+    }
 
+    public void removeTopic(String topicName) {
+        topics.remove(topicName);
+    }
 }
