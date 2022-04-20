@@ -147,9 +147,6 @@ public class UserNode {
         private void pull(String topicName) {
 
         }
-
-
-
     }
 
     public HashMap<String, ArrayList<Value>> getMessageLists() {
