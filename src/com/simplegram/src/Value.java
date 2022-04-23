@@ -1,19 +1,17 @@
 package com.simplegram.src;
 
-public class Value {
+import java.io.Serializable;
+import java.util.Date;
 
-    private String datapath;
+public class Value implements Serializable {
 
-    public Value(String path){
-        datapath = path;
+    private Date dateSent;
+
+    public Value(){
+        this.dateSent = new Date();
     }
 
-    public String getDatapath() {
-        return datapath;
-    }
-
-    public void setDatapath(String path){
-        datapath = path;
-
+    public Date getDateSent() {
+        return dateSent;
     }
 }

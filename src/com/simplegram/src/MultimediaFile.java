@@ -2,7 +2,7 @@ package com.simplegram.src;
 
 import java.io.Serializable;
 
-public class MultimediaFile implements Serializable {
+public class MultimediaFile extends Value implements Serializable {
     private String destinationDirectory;
     private String sourceDirectory;
     private String filename;
@@ -10,8 +10,56 @@ public class MultimediaFile implements Serializable {
     private byte[] fileData;
     private String status;
 
-    public MultimediaFile() {
+    public String getDestinationDirectory() {
+        return destinationDirectory;
+    }
 
+    public void setDestinationDirectory(String destinationDirectory) {
+        this.destinationDirectory = destinationDirectory;
+    }
+
+    public String getSourceDirectory() {
+        return sourceDirectory;
+    }
+
+    public void setSourceDirectory(String sourceDirectory) {
+        this.sourceDirectory = sourceDirectory;
+    }
+
+    public String getFilename() {
+        return filename;
+    }
+
+    public void setFilename(String filename) {
+        this.filename = filename;
+    }
+
+    public long getFileSize() {
+        return fileSize;
+    }
+
+    public void setFileSize(long fileSize) {
+        this.fileSize = fileSize;
+    }
+
+    public byte[] getFileData() {
+        return fileData;
+    }
+
+    public void setFileData(byte[] fileData) {
+        this.fileData = fileData;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public MultimediaFile() {
+        super();
     }
 }
 
