@@ -1,14 +1,11 @@
 package com.simplegram.src.experimental;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 
-public class Server {
+public class Server{
 
     private ArrayList<ConnectionHandler> connections;
     private boolean daemon;
@@ -22,16 +19,46 @@ public class Server {
     public void startBroker(){
         try{
             serverSocket = new ServerSocket(5000);//initialize server
-            System.out.println("listening to port:5000");
+            System.out.println("Listening to port:5000");
+            System.out.println("Press sd at any moment to shut down server");
 
-            while(daemon){//Constantly accept connections until Shutdown
-                Socket clientSocket = serverSocket.accept();
-                System.out.println(clientSocket+" connected.");
-                ConnectionHandler handler = new ConnectionHandler(clientSocket);
-                Thread thread = new Thread(handler);
-                connections.add(handler);
-                thread.start();
-            }
+            new Thread(new Runnable() {//Constantly accept connections until Shutdown
+                @Override
+                public void run() {
+                    while(daemon){
+                        try{
+                            Socket clientSocket = serverSocket.accept();
+                            System.out.println(clientSocket+" connected.");
+                            ConnectionHandler handler = new ConnectionHandler(clientSocket);
+                            Thread thread = new Thread(handler);
+                            connections.add(handler);
+                            thread.start();
+                        }catch (Exception e){
+                            //
+                        }
+                    }
+                }
+            }).start();
+
+            new Thread(new Runnable() {//accept command line inputs from admin (mainly for shutdown)
+                @Override
+                public void run() {
+                    try {
+                        String command;
+                        BufferedReader inputReader = new BufferedReader(new InputStreamReader(System.in));
+                        while (daemon){
+                            command = inputReader.readLine();
+                            if (command.equals("sd")){
+                                shutdown();
+                            }
+                        }
+                    }catch (Exception e){
+                        //
+                    }
+                }
+            }).start();
+
+
         } catch (Exception e){
             e.printStackTrace();
         }
@@ -40,12 +67,15 @@ public class Server {
     public void shutdown(){
         try {
             daemon = false;
-            if(!serverSocket.isClosed()){//close the server socket
-                serverSocket.close();
-            }
+            System.out.println("Shutting down connections..");
             for(ConnectionHandler con: connections){//Close all client sockets
                 con.shutdown();
             }
+            System.out.println("Shutting down server..");
+            if(!serverSocket.isClosed()){//close the server socket
+                serverSocket.close();
+            }
+            System.out.println("Done");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -67,7 +97,7 @@ public class Server {
             try{
                 in = new DataInputStream(client.getInputStream());
                 out = new DataOutputStream(client.getOutputStream());
-                out.writeUTF("Hello There! Which among us cock shall it be today?");
+                out.writeUTF("Successfully connected to Server. Please issue a command:");
                 out.flush();
                 String request;
                 while (!client.isClosed()){
@@ -76,10 +106,6 @@ public class Server {
                         ;//do nothing
                     }else if(request.equals("send")){
                         receiveFile();
-                        out.writeUTF("File Received!");
-                        request = null;
-                        out.writeUTF("Anything else?");
-                        out.flush();
                     }else if(request.equals("quit")){
                         System.out.println(client+" is finished.");
                         request = null;
@@ -93,30 +119,38 @@ public class Server {
 
         private void receiveFile() throws Exception{//data transfer with chunking
             int bytes = 0;
-            long size = in.readLong();// read file size
+            int size = in.readInt();// amount of expected chunks
             String title = in.readUTF();// read file name
             //String type = title.substring(title.lastIndexOf('.'+1));//determine data type
 
             FileOutputStream fileOutputStream = new FileOutputStream(title);
             byte[] buffer = new byte[512*1024]; //512 * 2^10 (512KByte chunk size)
-            while (size > 0 && (bytes = in.read(buffer, 0, (int)Math.min(buffer.length, size))) != -1) {
-                fileOutputStream.write(buffer,0,bytes);
-                size -= bytes;      // read upto file size
+            //boolean check = false;
+            //while (check == false){
+            //    check = in.readBoolean();
+            //}
+            while (size>0) {
+                in.readFully(buffer, 0, 512*1024);
+                fileOutputStream.write(buffer,0,512*1024);
+                size --;
+                System.out.println(size);
+                //out.writeBoolean(true);
             }
             fileOutputStream.close();
             System.out.println("Received file: "+title);
         }
 
         public void shutdown(){
-                try {
-                    in.close();
-                    out.close();
-                    if(!client.isClosed()){
-                        client.close();
-                    }
-                }catch (Exception e){
-                    //
+            try {
+                in.close();
+                out.close();
+                if(!client.isClosed()){
+                    client.close();
                 }
+            }catch (Exception e){
+                //
+            }
+
         }
     }
 

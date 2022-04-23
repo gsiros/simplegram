@@ -2,8 +2,10 @@ package com.simplegram.src.experimental;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.ArrayList;
 
-public class Client {
+
+public class Client{
     private Socket client;
     private DataInputStream in;
     private DataOutputStream out;
@@ -23,7 +25,7 @@ public class Client {
             Thread t = new Thread(handler);
             t.start();
 
-            String serverResponse;
+            String serverResponse;//listen for server responses
             while (!client.isClosed()){
                 serverResponse = in.readUTF();
                 System.out.println(serverResponse);
@@ -54,51 +56,60 @@ public class Client {
                 BufferedReader inputReader = new BufferedReader(new InputStreamReader(System.in));
                 while (daemon){
                     String input = inputReader.readLine();
-                    switch (input){
-                        case ("send"):{
-                            out.writeUTF("send");
-                            out.flush();
-                            System.out.println("Give the name of the file");
-                            String filename = inputReader.readLine();
-                            sendFile(filename);
-                            System.out.println(in.readUTF());
-                            break;
-                        }
-                        case ("quit"): {
-                            out.writeUTF("quit");
-                            out.flush();
-                            inputReader.close();
-                            shutdown();
-                            break;
-                        }
-                        default:{
-                            System.out.println("Not a valid input");
-                        }
+                    if(input.equals("send")){
+                        out.writeUTF("send");
+                        out.flush();
+                        System.out.println("Give the name of the file");
+                        String filename = inputReader.readLine();
+                        sendFile(filename);
+                        System.out.println("Next Command:");
+                    }else if(input.equals("quit")){
+                        out.writeUTF("quit");
+                        out.flush();
+                        inputReader.close();
+                        shutdown();
+                    }else{
+                        System.out.println("Not a valid input");
                     }
                 }
             }catch (Exception e){
                 e.printStackTrace();
             }
         }
-        private void sendFile(String path) throws Exception{
-            int bytes = 0;
-            File file = new File(path);
-            FileInputStream fileInputStream = new FileInputStream(file);
+        private void sendFile(String path){
+            try {
+                int bytes = 0;
+                File file = new File(path);
+                FileInputStream fileInputStream = new FileInputStream(file);
+                ArrayList<byte[]> chunks = new ArrayList<byte[]>();
 
-            // send file size
-            out.writeLong(file.length());
-            out.flush();
-            //send file type
-            out.writeUTF(path.substring(path.lastIndexOf("/")+1));
-            out.flush();
-            // break file into chunks
-            byte[] buffer = new byte[512*1024];
-            while ((bytes=fileInputStream.read(buffer))!=-1){
-                out.write(buffer,0,bytes);
+
+                // break file into chunks
+
+                byte[] buffer = new byte[512 * 1024];
+                while ((bytes = fileInputStream.read(buffer)) != -1) {
+                    chunks.add(buffer.clone());
+
+                }
+                // send file size
+                out.writeInt(chunks.size());
                 out.flush();
-            }
-            fileInputStream.close();
+                //send file type
+                out.writeUTF(path.substring(path.lastIndexOf("/") + 1));
+                out.flush();
+                //boolean check = false;
+                //out.writeBoolean(true);
+                for (int i = 0; i < chunks.size(); i++) {
+                    System.out.println("Sending chunk #" + i);
+                    out.write(chunks.get(i), 0, 512 * 1024);
+                    out.flush();
+                    //while (!check){check = in.readBoolean();}
+                    //check = false;
+                }
+                fileInputStream.close();
+            }catch (Exception e){}
         }
+
 
     }
 

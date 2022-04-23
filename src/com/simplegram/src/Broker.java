@@ -9,7 +9,9 @@ import java.util.HashMap;
 public class Broker {
 
     private HashMap<Integer, BrokerHandler> brokers; // list of broker connections
-    private ArrayList<UserNode> connectedUsers;
+
+    private ArrayList<SubscriberHandler> connectedSubscribers;
+    private ArrayList<PublisherHandler> connectedPublishers;
     private HashMap<String, Topic> topics;
     private HashMap<String, ArrayList<Value>> messageQueue; //messages to be sent <topicname, message>
     private boolean daemon;
@@ -20,36 +22,23 @@ public class Broker {
 
     private Socket userConnection;
 
-    // init broker to become ready for
-    // new connections with usernodes
-
-    public void startPublisherService() throws IOException {
-        while(daemon) {
-            Socket userSocket = pubServiceProviderSocket.accept();
-            System.out.println(userSocket + "connected.");
-
-            PublisherHandler handler = new PublisherHandler(userSocket);
-            Thread thread = new Thread(handler);
-            connectedUsers.add(handler);
-        }
-    }
-    public void startSubscriberService() throws IOException {
-        while(daemon) {
-            Socket userSocket = subServiceProviderSocket.accept();
-            System.out.println(userSocket + "connected.");
-
-            PublisherHandler handler = new PublisherHandler(userSocket);
-            Thread thread = new Thread(handler);
-            connectedUsers.add(handler);
-        }
+    public Broker() {
     }
 
+    public void createTopic(String topicName) {
+        Topic topic = new Topic();
+        topics.put(topicName, topic);
+    }
 
+    public void removeTopic(String topicName) {
+        topics.remove(topicName);
+    }
 
 
     public void startBroker() {
         this.brokers = new HashMap<Integer, BrokerHandler>();
-        this.connectedUsers = new ArrayList<UserNode>();
+        this.connectedPublishers = new ArrayList<PublisherHandler>();
+        this.connectedSubscribers = new ArrayList<SubscriberHandler>();
         this.topics = new HashMap<String, Topic>();
         this.messageQueue = new HashMap<String, ArrayList<Value>>();
         this.daemon = true;
@@ -81,6 +70,47 @@ public class Broker {
             }
 
             //TODO: start pub and sub services..
+            //Publisher Service
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try{
+                        //accept incoming connections
+                        while(daemon) {
+                            Socket userSocket = pubServiceProviderSocket.accept();
+                            System.out.println(userSocket + "connected.");
+
+                            PublisherHandler handler = new PublisherHandler(userSocket);
+                            Thread thread = new Thread(handler);
+                            connectedPublishers.add(handler);
+                        }
+                    }catch (IOException e){
+
+                    }
+
+                }
+            }).start();
+
+            //Subscriber Service
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try{
+                        //accept incoming connections
+                        while(daemon) {
+                            Socket userSocket = subServiceProviderSocket.accept();
+                            System.out.println(userSocket + "connected.");
+
+                            SubscriberHandler handler = new SubscriberHandler(userSocket);
+                            Thread thread = new Thread(handler);
+                            connectedSubscribers.add(handler);
+                        }
+                    }catch (IOException e){
+
+                    }
+
+                }
+            }).start();
 
         } catch (Exception E) {
             //
@@ -92,6 +122,7 @@ public class Broker {
     // delete se ligo
     // begin the main functionality,
     // start accepting connections.
+    /*
     void start(){
         try {
 
@@ -125,20 +156,17 @@ public class Broker {
             }
         }
     }
+    */
     
-    public void createTopic(String topicName) {
-        Topic topic = new Topic();
-        topics.put(topicName, topic);
-    }
 
-    public void removeTopic(String topicName) {
-        topics.remove(topicName);
-    }
+
+/*
+TODO: pull method
 
     public void pull(String topicName) { //update all subscribers of Topic("topicName")
         Topic topic = topics.get(topicName);
         for (UserNode usrNode : topic.getSubscribers()){
-            int lastMsgIndex = connectedUsers.get(connectedUsers.indexOf(usrNode)).getMessageLists().get(topicName).size(); // ask the user for the index of the latest message in the user's msgQueue on said topic
+            int lastMsgIndex = connectedSubscribers.get(connectedSubscribers.indexOf(usrNode)).getMessageLists().get(topicName).size(); // ask the user for the index of the latest message in the user's msgQueue on said topic
             while (lastMsgIndex <= topic.getMessageQueue().size()){
                 Value msg = topic.getMessageQueue().get(lastMsgIndex);//message to be delivered
                 //send msg to user
@@ -146,7 +174,7 @@ public class Broker {
             }
         }
     }
-
+*/
 
     class PublisherHandler implements Runnable{//actions for Server
 
@@ -163,7 +191,7 @@ public class Broker {
             try{
                 in = new DataInputStream(client.getInputStream());
                 out = new DataOutputStream(client.getOutputStream());
-                out.writeUTF("Hello There! Which among us cock shall it be today?");
+                out.writeUTF("Connection Established. Enter a request...");
                 out.flush();
                 String request;
                 while (!client.isClosed()){
@@ -216,6 +244,40 @@ public class Broker {
         }
     }
 
+    class SubscriberHandler implements Runnable{
+
+        private Socket client;
+        private DataOutputStream out;
+        private DataInputStream in;
+
+        public SubscriberHandler(Socket client){
+            this.client = client;
+        }
+
+        @Override
+        public void run() {
+            try{
+                in = new DataInputStream(client.getInputStream());
+                out = new DataOutputStream(client.getOutputStream());
+
+            }catch(Exception e){
+                e.printStackTrace();
+            }
+
+        }
+        public void shutdown(){
+            try {
+                in.close();
+                out.close();
+                if(!client.isClosed()){
+                    client.close();
+                }
+            }catch (Exception e){
+                //
+            }
+        }
+    }
+
     class BrokerHandler implements Runnable {
         private Socket socket;
 
@@ -227,7 +289,4 @@ public class Broker {
 
         }
     }
-
-
-
 }
