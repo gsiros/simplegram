@@ -8,6 +8,7 @@ import java.util.HashMap;
 
 public class Broker {
 
+    // GS version
     private HashMap<Integer, BrokerHandler> brokers; // list of broker connections
 
     private ArrayList<SubscriberHandler> connectedSubscribers;
