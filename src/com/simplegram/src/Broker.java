@@ -1,47 +1,123 @@
 package com.simplegram.src;
 
+import com.simplegram.src.cbt.UserHandler;
+import com.simplegram.src.ibc.BrokerConnection;
+import com.simplegram.src.ibc.ReceiveHandler;
+import com.simplegram.src.ibc.SendHandler;
+
 import java.io.*;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.*;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Scanner;
 
 public class Broker {
 
-    private HashMap<Integer, BrokerHandler> brokers; // list of broker connections
+    //private HashMap<Integer, BrokerHandler> brokers; // list of broker connections
 
-    private ArrayList<SubscriberHandler> connectedSubscribers;
-    private ArrayList<PublisherHandler> connectedPublishers;
+    /*
+    * Kind controversial data structures...
+    * A unified userconnections arraylist should be
+    * used instead.
+    * */
+    // TODO: unify the data structures...
+    //private ArrayList<SubscriberHandler> connectedSubscribers;
+    //private ArrayList<PublisherHandler> connectedPublishers;
+    // to be replaced...
+
+    // Broker data structures
     private HashMap<String, Topic> topics;
     private HashMap<String, ArrayList<Value>> messageQueue; //messages to be sent <topicname, message>
     private boolean daemon;
 
-    private ServerSocket pubServiceProviderSocket;
-    private ServerSocket subServiceProviderSocket;
-    private ServerSocket brokerServiceProviderSocket;
 
-    private Socket userConnection;
+    // IBC protocol
+    private DatagramSocket ibcSocket;
+    private ArrayList<InetAddress> brokerAddresses;
+    private HashMap<InetAddress, BrokerConnection> brokerConnections;
 
-    public Broker() {
+    /*
+    * Again, a single socket should be used instead...
+    * */
+    // TODO: unify sockets...
+    //private ServerSocket pubServiceProviderSocket;
+    //private ServerSocket subServiceProviderSocket;
+    // Communication Between Terminals socket.
+    private ServerSocket cbtSocket;
+
+    public Broker(String brokers_addr_file){
+        this.brokerAddresses = new ArrayList<InetAddress>();
+        this.brokerConnections = new HashMap<InetAddress,BrokerConnection>();
+        readBrokers(brokers_addr_file);
     }
 
-    public void createTopic(String topicName) {
-        Topic topic = new Topic();
-        topics.put(topicName, topic);
+    private void readBrokers(String filename){
+        File f = new File(filename);
+        try {
+            Scanner sc = new Scanner(f);
+            while(sc.hasNextLine()){
+                InetAddress ia = InetAddress.getByName(sc.nextLine());
+                this.brokerAddresses.add(ia);
+                this.brokerConnections.put(ia, new BrokerConnection(ia));
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
     }
 
-    public void removeTopic(String topicName) {
-        topics.remove(topicName);
+    /**
+     * startInterBrokerCommunication:
+     *
+     * starts IBC protocol.
+     *
+     *
+     * @throws SocketException
+     */
+    private void startInterBrokerCommunication() throws SocketException {
+        this.ibcSocket = new DatagramSocket(4444);
+
+        ConnectionChecker cc = new ConnectionChecker(this.brokerConnections);
+        cc.start();
+
+        ReceiveHandler rh = new ReceiveHandler(this.ibcSocket, this.brokerConnections);
+        rh.start();
+
+        for(InetAddress addr : this.brokerAddresses){
+            SendHandler sh = new SendHandler(this.ibcSocket, addr);
+            sh.start();
+        }
+    }
+
+    private void startCommunicationBetweenTerminals() throws IOException {
+        // TODO: handle connections from usernodes.
+
+        // Bind server tcp socket:
+        this.cbtSocket = new ServerSocket(5000);
+
+        while(true){
+            Socket userConSocket = this.cbtSocket.accept();
+            UserHandler uh = new UserHandler(userConSocket, this.topics);
+            uh.start();
+        }
+
     }
 
 
-    public void startBroker() {
-        this.brokers = new HashMap<Integer, BrokerHandler>();
-        this.connectedPublishers = new ArrayList<PublisherHandler>();
-        this.connectedSubscribers = new ArrayList<SubscriberHandler>();
+    public void startBroker() throws IOException {
+
         this.topics = new HashMap<String, Topic>();
         this.messageQueue = new HashMap<String, ArrayList<Value>>();
         this.daemon = true;
+
+        this.topics.put("test", new Topic("test"));
+        this.topics.put("tes1", new Topic("tes1"));
+
+        // Start IBC service.
+        this.startInterBrokerCommunication();
+        // Start CBT service. -- WARNING, while-true loop in startCBT.
+        this.startCommunicationBetweenTerminals();
 
         try {
             BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
@@ -50,10 +126,10 @@ public class Broker {
             //userServiceProviderSocket = new ServerSocket(port);
 
             // for now:
-            pubServiceProviderSocket = new ServerSocket(5000);
-            subServiceProviderSocket = new ServerSocket(5001);
+            //pubServiceProviderSocket = new ServerSocket(5000);
+            //subServiceProviderSocket = new ServerSocket(5001);
 
-            System.out.println("Give port number(Broker Communication)");
+            /*System.out.println("Give port number(Broker Communication)");
             int port = Integer.parseInt(input.readLine());
             brokerServiceProviderSocket = new ServerSocket(port);
 
@@ -67,11 +143,11 @@ public class Broker {
                 Thread brokerHandlerThread = new Thread(brokerHandler);
                 brokers.put(i, brokerHandler);
                 brokerHandlerThread.start();
-            }
+            }*/
 
             //TODO: start pub and sub services..
             //Publisher Service
-            new Thread(new Runnable() {
+            /*new Thread(new Runnable() {
                 @Override
                 public void run() {
                     try{
@@ -110,7 +186,7 @@ public class Broker {
                     }
 
                 }
-            }).start();
+            }).start();*/
 
         } catch (Exception E) {
             //

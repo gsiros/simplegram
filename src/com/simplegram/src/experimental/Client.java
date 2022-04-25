@@ -1,5 +1,8 @@
 package com.simplegram.src.experimental;
 
+import com.simplegram.src.Message;
+import com.simplegram.src.logging.TerminalColors;
+
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -7,8 +10,8 @@ import java.util.ArrayList;
 
 public class Client{
     private Socket client;
-    private DataInputStream in;
-    private DataOutputStream out;
+    private ObjectInputStream in;
+    private ObjectOutputStream out;
     private boolean daemon;// we put it here (and not in Handler) to be able to shutdown from Client
 
     public Client(){
@@ -18,8 +21,8 @@ public class Client{
     public void ClientStart() {
         try {
             client = new Socket("localhost", 5000);
-            out = new DataOutputStream(client.getOutputStream());
-            in = new DataInputStream(client.getInputStream());
+            out = new ObjectOutputStream(client.getOutputStream());
+            in = new ObjectInputStream(client.getInputStream());
 
             InputHandler handler = new InputHandler();
             Thread t = new Thread(handler);
@@ -27,11 +30,11 @@ public class Client{
 
             String serverResponse;//listen for server responses
             while (!client.isClosed()){
-                serverResponse = in.readUTF();
-                System.out.println(serverResponse);
+                //serverResponse = in.readUTF();
+                //System.out.println(TerminalColors.ANSI_BLUE+serverResponse+TerminalColors.ANSI_RESET);
             }
         } catch (IOException e){
-            //
+            e.printStackTrace();
         }
     }
 
@@ -54,16 +57,80 @@ public class Client{
         public void run() {
             try {
                 BufferedReader inputReader = new BufferedReader(new InputStreamReader(System.in));
-                while (daemon){
+                System.out.println("Chose action: SUB, PUSH, PULL:");
+                while (daemon) {
                     String input = inputReader.readLine();
-                    if(input.equals("send")){
-                        out.writeUTF("send");
+                    if (input.equals("SUB")) {
+
+                        out.writeUTF("SUB");
                         out.flush();
-                        System.out.println("Give the name of the file");
-                        String filename = inputReader.readLine();
-                        sendFile(filename);
+
+                        System.out.println("Username?");
+                        out.writeUTF(inputReader.readLine());
+                        out.flush();
+
+
+                        System.out.println("Topic to send to?");
+                        out.writeUTF(inputReader.readLine());
+                        out.flush();
+
+
+                        // server reply
+                        System.out.println(in.readUTF());
+
                         System.out.println("Next Command:");
-                    }else if(input.equals("quit")){
+                    } else if (input.equals("PUSH")) {
+
+                        out.writeUTF("PUSH");
+                        out.flush();
+
+                        System.out.println("Username?");
+                        String user = inputReader.readLine();
+                        out.writeUTF(user);
+                        out.flush();
+
+                        System.out.println("Topic to send to?");
+                        out.writeUTF(inputReader.readLine());
+                        out.flush();
+
+                        out.writeUTF("MSG");
+                        out.flush();
+
+                        System.out.println("Message to send:");
+                        Message m2send = new Message(user,inputReader.readLine());
+                        out.writeObject(m2send);
+                        out.flush();
+
+                        // server reply
+                        System.out.println(in.readUTF());
+
+                        System.out.println("Next Command:");
+
+                        //System.out.println("Give the name of the file");
+                        //String filename = inputReader.readLine();
+                        //sendFile(filename);
+                        //System.out.println("Next Command:");
+                    } else if(input.equals("PULL")){
+
+                        out.writeUTF("PULL");
+                        out.flush();
+
+                        System.out.println("Username?");
+                        out.writeUTF(inputReader.readLine());
+                        out.flush();
+
+                        do {
+                            String topic_name = in.readUTF();
+                            if(topic_name.equals("---"))
+                                break;
+                            String val_type = in.readUTF();
+                            Message m = (Message) in.readObject();
+                            System.out.println(TerminalColors.ANSI_GREEN+m.getSentFrom()+"@"+topic_name+": "+m.getMsg()+TerminalColors.ANSI_RESET);
+                        } while(!in.readUTF().equals("---"));
+
+                        System.out.println("Next Command:");
+
+                    } else if(input.equals("quit")){
                         out.writeUTF("quit");
                         out.flush();
                         inputReader.close();
@@ -89,7 +156,6 @@ public class Client{
                 byte[] buffer = new byte[512 * 1024];
                 while ((bytes = fileInputStream.read(buffer)) != -1) {
                     chunks.add(buffer.clone());
-
                 }
                 // send file size
                 out.writeInt(chunks.size());

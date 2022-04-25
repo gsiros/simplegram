@@ -58,8 +58,8 @@ public class MultimediaFile extends Value implements Serializable {
         this.status = status;
     }
 
-    public MultimediaFile() {
-        super();
+    public MultimediaFile(String sentFrom) {
+        super(sentFrom);
     }
 }
 
