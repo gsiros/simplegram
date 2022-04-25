@@ -55,8 +55,7 @@ public class UserHandler extends Thread {
                             incoming_value = (Message) this.in.readObject();
                         } else if (val_type.equals("MULTIF")){
                             // GET FILE INFO.
-                            incoming_value = (MultimediaFile) this.in.readObject();
-                            // TODO: receive file chunks...
+                            incoming_value = receiveFile();
                         }
                         synchronized (this.topics){
                             this.topics.get(topic_name).addMessage(incoming_value);
@@ -141,7 +140,7 @@ public class UserHandler extends Thread {
                 this.out.writeUTF("MULTIF");
                 this.out.flush();
                 // MULTIMEDIA FILE
-                //this.sendFile(mf);
+                this.sendFile(mf);
             }
             this.out.writeUTF("EOV");
             this.out.flush();
@@ -151,42 +150,65 @@ public class UserHandler extends Thread {
 
     }
 
-    private void sendFile(MultimediaFile mf) throws Exception {
+    private void sendFile(MultimediaFile mf2send){
+        try {
+            int bytes = 0;
 
-        int bytes = 0;
-        File file = new File(mf.getSourceDirectory());
-        FileInputStream fileInputStream = new FileInputStream(file);
+            ArrayList<byte[]> chunks = mf2send.getChunks();
 
-        // send file size
-        this.out.writeLong(file.length());
-        this.out.flush();
-        //send file type
-        this.out.writeUTF(mf.getSourceDirectory().substring(mf.getSourceDirectory().lastIndexOf("/") + 1));
-        this.out.flush();
-        // break file into chunks
-        byte[] buffer = new byte[512 * 1024];
-        while ((bytes = fileInputStream.read(buffer)) != -1) {
-            this.out.write(buffer, 0, bytes);
-            this.out.flush();
+            // Create MultiMedia Object
+            MultimediaFile mf2send_empty = new MultimediaFile(
+                    mf2send.getSentFrom(),
+                    mf2send.getFilename(),
+                    chunks.size(),
+                    new ArrayList<byte[]>()
+            );
+
+            out.writeObject(mf2send);
+            out.flush();
+
+            // send file size
+            //out.writeInt(chunks.size());
+            //out.flush();
+            //send file type
+            //out.writeUTF(path.substring(path.lastIndexOf("/") + 1));
+            //out.flush();
+            //boolean check = false;
+            //out.writeBoolean(true);
+
+            for (int i = 0; i < chunks.size(); i++) {
+                System.out.println("Sending chunk #" + i);
+                out.write(chunks.get(i), 0, 512 * 1024);
+                out.flush();
+
+            }
+        }catch (Exception e){
+            e.printStackTrace();
         }
-        fileInputStream.close();
     }
 
-
-    private void receiveFile() throws Exception{ //data transfer with chunking
+    private MultimediaFile receiveFile() throws Exception{//data transfer with chunking
         int bytes = 0;
-        long size = this.in.readLong();// read file size
-        String title = this.in.readUTF();// read file name
+        MultimediaFile mf_rcv = (MultimediaFile) in.readObject();
+
+        int size = mf_rcv.getFileSize();// amount of expected chunks
+        String filename = mf_rcv.getFilename();// read file name
         //String type = title.substring(title.lastIndexOf('.'+1));//determine data type
 
-        FileOutputStream fileOutputStream = new FileOutputStream(title);
         byte[] buffer = new byte[512*1024]; //512 * 2^10 (512KByte chunk size)
-        while (size > 0 && (bytes = in.read(buffer, 0, (int)Math.min(buffer.length, size))) != -1) {
-            fileOutputStream.write(buffer,0,bytes);
-            size -= bytes;      // read upto file size
+        //boolean check = false;
+        //while (check == false){
+        //    check = in.readBoolean();
+        //}
+        while (size>0) {
+            in.readFully(buffer, 0, 512*1024);
+            mf_rcv.getChunks().add(buffer.clone());
+            size --;
+            System.out.println(size);
+            //out.writeBoolean(true);
         }
-        fileOutputStream.close();
-        System.out.println("Received file: "+title);
+        System.out.println("Received file: "+mf_rcv.getFilename());
+        return mf_rcv;
     }
 
     private void shutdown(){
