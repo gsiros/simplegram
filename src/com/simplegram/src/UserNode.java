@@ -14,13 +14,10 @@ public class UserNode {
     // Local data structures
     private HashMap<String, Topic> topics;
 
-
     // The list of brokers that the node requires
     // in order to publish and consume data.
     private ArrayList<InetAddress> brokerAddresses;
     private HashMap<InetAddress, BrokerConnection> brokerConnections;
-
-
 
     private Socket cbtSocket;
 
@@ -60,6 +57,8 @@ public class UserNode {
     class PubHandler extends Thread {
 
         private Socket cbtSocket;
+        private ObjectInputStream cbtIn;
+        private ObjectOutputStream cbtOut;
 
         public PubHandler(Socket cbtSocket){
             this.cbtSocket = cbtSocket;

@@ -25,6 +25,7 @@ public class Broker {
     private ServerSocket cbtSocket;
 
     public Broker(String brokers_addr_file){
+        this.topics = new HashMap<String, Topic>();
         this.brokerAddresses = new ArrayList<InetAddress>();
         this.brokerConnections = new HashMap<InetAddress,BrokerConnection>();
         readBrokers(brokers_addr_file);
@@ -83,8 +84,6 @@ public class Broker {
     }
 
     public void startBroker() throws IOException {
-
-        this.topics = new HashMap<String, Topic>();
 
         this.topics.put("test", new Topic("test"));
         this.topics.put("tes1", new Topic("tes1"));

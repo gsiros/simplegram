@@ -46,8 +46,9 @@ public class UserHandler extends Thread {
                     // Get user name:
                     String user_name = this.in.readUTF();
                     // Get topic name:
+                    //TODO: CHECK TOPIC HASH IF I AM RESPONSIBLE
                     String topic_name = this.in.readUTF();
-                    // Check if user is allowed to post in this sub.
+                    // Check if user is allowed to push in this topic.
                     if(this.topics.get(topic_name).isSubbed(user_name)){
                         String val_type = this.in.readUTF();
                         Value incoming_value = null;
@@ -128,7 +129,6 @@ public class UserHandler extends Thread {
             if(v instanceof Message) {
                 Message m = (Message) v;
                 // TYPE
-                System.out.println("HERE!");
                 this.out.writeUTF("MSG");
                 this.out.flush();
                 // MESSAGE
@@ -142,7 +142,7 @@ public class UserHandler extends Thread {
                 // MULTIMEDIA FILE
                 this.sendFile(mf);
             }
-            this.out.writeUTF("EOV");
+            this.out.writeUTF("EOV"); //  End Of Value
             this.out.flush();
         } catch (Exception e) {
             e.printStackTrace();
@@ -164,7 +164,7 @@ public class UserHandler extends Thread {
                     new ArrayList<byte[]>()
             );
 
-            out.writeObject(mf2send);
+            out.writeObject(mf2send_empty);
             out.flush();
 
             // send file size

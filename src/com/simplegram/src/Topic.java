@@ -49,13 +49,11 @@ public class Topic {
     public ArrayList<Value> getLatestMessagesFor(String user){
         ArrayList<Value> msgs = new ArrayList<Value>();
         int index = this.indexInTopic.get(user);
-        System.out.println("Old index:" +index);
         for(int i = index; i<this.messageQueue.size(); i++){
             msgs.add(this.messageQueue.get(i));
         }
 
         this.indexInTopic.put(user, this.messageQueue.size());
-        System.out.println("New index:" +this.indexInTopic.get(user));
         return msgs;
     }
 
