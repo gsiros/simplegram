@@ -86,7 +86,6 @@ public class Broker {
     public void startBroker() throws IOException {
 
         this.topics.put("test", new Topic("test"));
-        this.topics.put("tes1", new Topic("tes1"));
 
         // Start IBC service.
         this.startInterBrokerCommunication();

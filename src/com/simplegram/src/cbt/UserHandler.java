@@ -36,12 +36,12 @@ public class UserHandler extends Thread {
             this.out = new ObjectOutputStream(this.userConSocket.getOutputStream());
 
             String request;
-            while (!this.userConSocket.isClosed()){
+            while (!this.userConSocket.isClosed()) {
                 request = this.in.readUTF();
 
-                if(request == null){
+                if (request == null) {
                     //do nothing
-                }else if(request.equals("PUSH")){
+                } else if (request.equals("PUSH")) {
                     // TODO: handle PUSH action.
                     // Get user name:
                     String user_name = this.in.readUTF();
@@ -49,71 +49,96 @@ public class UserHandler extends Thread {
                     //TODO: CHECK TOPIC HASH IF I AM RESPONSIBLE
                     String topic_name = this.in.readUTF();
                     // Check if user is allowed to push in this topic.
-                    if(this.topics.get(topic_name).isSubbed(user_name)){
-                        String val_type = this.in.readUTF();
-                        Value incoming_value = null;
-                        if(val_type.equals("MSG")){
-                            incoming_value = (Message) this.in.readObject();
-                        } else if (val_type.equals("MULTIF")){
-                            // GET FILE INFO.
-                            incoming_value = receiveFile();
-                        }
-                        synchronized (this.topics){
-                            this.topics.get(topic_name).addMessage(incoming_value);
-                        }
+                    if (this.topics.get(topic_name).isSubbed(user_name)) {
 
                         out.writeUTF("OK");
                         out.flush();
-                        System.out.println(TerminalColors.ANSI_PURPLE+"USR: "+user_name+" pushed value: '"+incoming_value+"' in topic: "+topic_name+" ."+TerminalColors.ANSI_RESET);
+
+                        String val_type = this.in.readUTF();
+                        Value incoming_value = null;
+                        if (val_type.equals("MSG")) {
+                            incoming_value = (Message) this.in.readObject();
+                        } else if (val_type.equals("MULTIF")) {
+                            // GET FILE INFO.
+                            incoming_value = receiveFile();
+                        }
+                        synchronized (this.topics) {
+                            this.topics.get(topic_name).addMessage(incoming_value);
+                        }
+
+
+                        System.out.println(TerminalColors.ANSI_PURPLE + "USR: " + user_name + " pushed value: '" + incoming_value + "' in topic: " + topic_name + " ." + TerminalColors.ANSI_RESET);
                     } else {
                         out.writeUTF("NOK");
                         out.flush();
                     }
 
+                    out.writeUTF("END");
+                    out.flush();
 
-                } else if(request.equals("SUB")){
+
+                } else if (request.equals("SUB")) {
                     // TODO: handle SUB action.
                     String user_name = this.in.readUTF();
                     String topic_name = this.in.readUTF();
-                    synchronized (this.topics){
-                        if(this.topics.keySet().contains(topic_name)) {
+                    synchronized (this.topics) {
+                        if (this.topics.keySet().contains(topic_name)) {
                             this.topics.get(topic_name).addUser(user_name);
                             this.out.writeUTF("OK");
                             this.out.flush();
-                            System.out.println(TerminalColors.ANSI_PURPLE+"USR: "+user_name+" subscribed to topic: "+topic_name+"."+TerminalColors.ANSI_RESET);
+                            System.out.println(TerminalColors.ANSI_PURPLE + "USR: " + user_name + " subscribed to topic: " + topic_name + "." + TerminalColors.ANSI_RESET);
+                        } else {
+
+                            this.topics.put(topic_name, new Topic(topic_name));
+                            this.topics.get(topic_name).addUser(user_name);
+
+                            this.out.writeUTF("NOK");
+                            this.out.flush();
+                        }
+                    }
+                }else if (request.equals("UNSUB")) {
+
+                    String user_name = this.in.readUTF();
+                    String topic_name = this.in.readUTF();
+                    synchronized (this.topics) {
+                        if (this.topics.keySet().contains(topic_name)) {
+                            this.topics.get(topic_name).removeUser(user_name);
+                            this.out.writeUTF("OK");
+                            this.out.flush();
+                            System.out.println(TerminalColors.ANSI_PURPLE + "USR: " + user_name + " unsubscribed to topic: " + topic_name + "." + TerminalColors.ANSI_RESET);
                         } else {
                             this.out.writeUTF("NOK");
                             this.out.flush();
                         }
                     }
-                } else if(request.equals("PULL")){
+                } else if (request.equals("PULL")) {
                     // TODO: handle PULL action.
                     HashMap<String, ArrayList<Value>> unreads = new HashMap<String, ArrayList<Value>>();
                     String user_name = this.in.readUTF();
 
-                    System.out.println(TerminalColors.ANSI_PURPLE+"USR: "+user_name+" issued a pull request!"+TerminalColors.ANSI_RESET);
-                    synchronized (this.topics){
-                        for (Topic t : this.topics.values()){
-                            if(t.isSubbed(user_name)){
-                                unreads.put(t.getName() ,t.getLatestMessagesFor(user_name));
+                    System.out.println(TerminalColors.ANSI_PURPLE + "USR: " + user_name + " issued a pull request!" + TerminalColors.ANSI_RESET);
+                    synchronized (this.topics) {
+                        for (Topic t : this.topics.values()) {
+                            if (t.isSubbed(user_name)) {
+                                unreads.put(t.getName(), t.getLatestMessagesFor(user_name));
                             }
                         }
                     }
 
-                    for(String topic_name : unreads.keySet())
-                        for(Value v : unreads.get(topic_name))
+                    for (String topic_name : unreads.keySet())
+                        for (Value v : unreads.get(topic_name))
                             this.send(topic_name, v);
 
                     this.out.writeUTF("---");
                     this.out.flush();
-                } else if(request.equals("QUIT")){
+                }else if(request.equals("QUIT")){
                     System.out.println(this.userConSocket+" is finished.");
                     request = null;
                     this.shutdown();
                 }
             }
         }catch (Exception e){
-            e.printStackTrace();
+            //e.printStackTrace();
             this.shutdown();
         }
 
@@ -166,15 +191,6 @@ public class UserHandler extends Thread {
 
             out.writeObject(mf2send_empty);
             out.flush();
-
-            // send file size
-            //out.writeInt(chunks.size());
-            //out.flush();
-            //send file type
-            //out.writeUTF(path.substring(path.lastIndexOf("/") + 1));
-            //out.flush();
-            //boolean check = false;
-            //out.writeBoolean(true);
 
             for (int i = 0; i < chunks.size(); i++) {
                 System.out.println("Sending chunk #" + i);

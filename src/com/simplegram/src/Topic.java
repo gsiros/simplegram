@@ -22,7 +22,7 @@ public class Topic {
     }
 
     public void removeUser(String user) {
-        this.subscribers.remove(subscribers.indexOf(user));
+        this.subscribers.remove(user);
         this.indexInTopic.remove(user);
     }
 
