@@ -31,7 +31,7 @@ public class Story extends MultimediaFile implements Serializable {
          *      KEEP;
          */
 
-        return (this.getDateSent().plusSeconds(1)).compareTo(LocalDateTime.now()) < 0;
+        return (this.getDateSent().plusDays(1)).compareTo(LocalDateTime.now()) < 0;
     }
 
     @Override
