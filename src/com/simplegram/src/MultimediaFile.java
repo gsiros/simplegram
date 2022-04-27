@@ -1,6 +1,7 @@
 package com.simplegram.src;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 
 public class MultimediaFile extends Value implements Serializable {
@@ -18,6 +19,15 @@ public class MultimediaFile extends Value implements Serializable {
             ArrayList<byte[]> chunks
             ) {
         super(sentFrom);
+        this.filename = filename;
+        this.fileSize = fileSize;
+        this.chunks = chunks;
+        this.fileSize = fileSize;
+    }
+
+
+    public MultimediaFile(LocalDateTime dateSent, String sentFrom, String filename, int fileSize, ArrayList<byte[]> chunks) {
+        super(dateSent, sentFrom);
         this.filename = filename;
         this.fileSize = fileSize;
         this.chunks = chunks;

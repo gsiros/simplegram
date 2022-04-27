@@ -1,9 +1,6 @@
 package com.simplegram.src.cbt;
 
-import com.simplegram.src.Message;
-import com.simplegram.src.MultimediaFile;
-import com.simplegram.src.Topic;
-import com.simplegram.src.Value;
+import com.simplegram.src.*;
 import com.simplegram.src.logging.TerminalColors;
 
 import java.io.*;
@@ -27,10 +24,6 @@ public class UserHandler extends Thread {
     public void run() {
         // TODO: handle user actions
 
-        /**
-         * PUSH/SUB/PULL
-         */
-
         try{
             this.in = new ObjectInputStream(this.userConSocket.getInputStream());
             this.out = new ObjectOutputStream(this.userConSocket.getOutputStream());
@@ -42,7 +35,6 @@ public class UserHandler extends Thread {
                 if (request == null) {
                     //do nothing
                 } else if (request.equals("PUSH")) {
-                    // TODO: handle PUSH action.
                     // Get user name:
                     String user_name = this.in.readUTF();
                     // Get topic name:
@@ -58,12 +50,18 @@ public class UserHandler extends Thread {
                         Value incoming_value = null;
                         if (val_type.equals("MSG")) {
                             incoming_value = (Message) this.in.readObject();
-                        } else if (val_type.equals("MULTIF")) {
+                        } else if (val_type.equals("MULTIF") || val_type.equals("STORY")) {
                             // GET FILE INFO.
-                            incoming_value = receiveFile();
+                            incoming_value = receiveFile(val_type);
                         }
+
+
                         synchronized (this.topics) {
-                            this.topics.get(topic_name).addMessage(incoming_value);
+                            if (val_type.equals("STORY")){
+                                this.topics.get(topic_name).addStory((Story) incoming_value);
+                            } else {
+                                this.topics.get(topic_name).addMessage(incoming_value);
+                            }
                         }
 
 
@@ -120,7 +118,7 @@ public class UserHandler extends Thread {
                     synchronized (this.topics) {
                         for (Topic t : this.topics.values()) {
                             if (t.isSubbed(user_name)) {
-                                unreads.put(t.getName(), t.getLatestMessagesFor(user_name));
+                                unreads.put(t.getName(), t.getLatestFor(user_name));
                             }
                         }
                     }
@@ -159,7 +157,14 @@ public class UserHandler extends Thread {
                 // MESSAGE
                 this.out.writeObject(m);
                 this.out.flush();
-            } else {
+            } else if (v instanceof Story){
+                Story story = (Story) v;
+                // TYPE
+                this.out.writeUTF("STORY");
+                this.out.flush();
+                // MULTIMEDIA FILE
+                this.sendFile(story);
+            }else if (v instanceof MultimediaFile){
                 MultimediaFile mf = (MultimediaFile) v;
                 // TYPE
                 this.out.writeUTF("MULTIF");
@@ -181,13 +186,26 @@ public class UserHandler extends Thread {
 
             ArrayList<byte[]> chunks = mf2send.getChunks();
 
-            // Create MultiMedia Object
-            MultimediaFile mf2send_empty = new MultimediaFile(
-                    mf2send.getSentFrom(),
-                    mf2send.getFilename(),
-                    chunks.size(),
-                    new ArrayList<byte[]>()
-            );
+            MultimediaFile mf2send_empty;
+
+             if(mf2send instanceof Story){
+                 mf2send_empty = new Story(
+                         mf2send.getDateSent(),
+                         mf2send.getSentFrom(),
+                         mf2send.getFilename(),
+                         chunks.size(),
+                         new ArrayList<byte[]>()
+                 );
+             } else {
+                 mf2send_empty = new MultimediaFile(
+                         mf2send.getDateSent(),
+                         mf2send.getSentFrom(),
+                         mf2send.getFilename(),
+                         chunks.size(),
+                         new ArrayList<byte[]>()
+                 );
+             }
+
 
             out.writeObject(mf2send_empty);
             out.flush();
@@ -203,25 +221,26 @@ public class UserHandler extends Thread {
         }
     }
 
-    private MultimediaFile receiveFile() throws Exception{//data transfer with chunking
-        int bytes = 0;
-        MultimediaFile mf_rcv = (MultimediaFile) in.readObject();
+    private MultimediaFile receiveFile(String val_type) throws Exception{//data transfer with chunking
+
+        MultimediaFile mf_rcv;
+
+        if(val_type.equals("MULTIF")){
+            mf_rcv = (MultimediaFile) in.readObject();
+        } else {
+            mf_rcv = (Story) in.readObject();
+
+        }
 
         int size = mf_rcv.getFileSize();// amount of expected chunks
-        String filename = mf_rcv.getFilename();// read file name
-        //String type = title.substring(title.lastIndexOf('.'+1));//determine data type
 
         byte[] buffer = new byte[512*1024]; //512 * 2^10 (512KByte chunk size)
-        //boolean check = false;
-        //while (check == false){
-        //    check = in.readBoolean();
-        //}
+
         while (size>0) {
             in.readFully(buffer, 0, 512*1024);
             mf_rcv.getChunks().add(buffer.clone());
             size --;
             System.out.println(size);
-            //out.writeBoolean(true);
         }
         System.out.println("Received file: "+mf_rcv.getFilename());
         return mf_rcv;

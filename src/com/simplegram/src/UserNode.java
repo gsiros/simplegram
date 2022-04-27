@@ -6,6 +6,7 @@ import com.simplegram.src.logging.TerminalColors;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -35,6 +36,9 @@ public class UserNode {
         this.topics.put("test", new Topic("test"));
         this.topics.get("test").addUser("george");
 
+        StoryChecker sc = new StoryChecker(this.topics);
+        sc.start();
+
         PullHandler pullh = new PullHandler(this.topics, "george");
         pullh.start();
 
@@ -42,7 +46,7 @@ public class UserNode {
         subToTopicHandler.start();
 
         try {
-            Thread.sleep(1000);
+            Thread.sleep(2000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -56,29 +60,58 @@ public class UserNode {
         ph.start();
 
         try {
-            Thread.sleep(1000);
+            Thread.sleep(2000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
 
-
-
-        UnsubFromTopicHandler unsubFromTopicHandler = new UnsubFromTopicHandler(this.topics, "george", "test");
-        unsubFromTopicHandler.start();
-
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        ArrayList<byte[]> chunks = UserNode.chunkify("/Users/George/Downloads/sena.jpeg");
+        MultimediaFile mystory = new Story("george",
+                "sena.jpeg",
+                chunks.size(),
+                chunks
+        );
+        System.out.println("I sent this at "+mystory.getDateSent());
 
         PushHandler ph2 = new PushHandler(
                 this.topics,
                 "george",
                 "test",
-                new Message("george","Hello chat again")
+                mystory
         );
         ph2.start();
+
+        try {
+            Thread.sleep(10000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+
+        MultimediaFile mystory2 = new Story("george",
+                "sena.jpeg",
+                chunks.size(),
+                chunks
+        );
+
+        PushHandler ph3 = new PushHandler(
+                this.topics,
+                "george",
+                "test",
+                mystory2
+        );
+        ph3.start();
+
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+
+        UnsubFromTopicHandler unsubFromTopicHandler = new UnsubFromTopicHandler(this.topics, "george", "test");
+        unsubFromTopicHandler.start();
+
 
         //ArrayList<byte[]> rex_chunks = this.chunkify("/Users/George/Documents/Photos/rex.jpg");
 
@@ -170,16 +203,28 @@ public class UserNode {
         private void sendFile(MultimediaFile mf2send){
             try {
                 int bytes = 0;
-
                 ArrayList<byte[]> chunks = mf2send.getChunks();
+                MultimediaFile mf2send_empty;
 
-                // Create MultiMedia Object
-                MultimediaFile mf2send_empty = new MultimediaFile(
-                        mf2send.getSentFrom(),
-                        mf2send.getFilename(),
-                        chunks.size(),
-                        new ArrayList<byte[]>()
-                );
+
+                if(mf2send instanceof Story){
+                    mf2send_empty = new Story(
+                            mf2send.getDateSent(),
+                            mf2send.getSentFrom(),
+                            mf2send.getFilename(),
+                            chunks.size(),
+                            new ArrayList<byte[]>()
+                    );
+                } else {
+                    mf2send_empty = new MultimediaFile(
+                            mf2send.getDateSent(),
+                            mf2send.getSentFrom(),
+                            mf2send.getFilename(),
+                            chunks.size(),
+                            new ArrayList<byte[]>()
+                    );
+                }
+                System.out.println("new chunks: "+mf2send_empty.getChunks().size());
 
                 this.cbtOut.writeObject(mf2send_empty);
                 this.cbtOut.flush();
@@ -226,6 +271,12 @@ public class UserNode {
                         this.cbtOut.writeObject(this.value);
                         this.cbtOut.flush();
 
+
+                    } else if(this.value instanceof Story) {
+                        this.cbtOut.writeUTF("STORY");
+                        this.cbtOut.flush();
+
+                        sendFile((Story) this.value);
 
                     } else if(this.value instanceof MultimediaFile) {
                         this.cbtOut.writeUTF("MULTIF");
@@ -408,8 +459,14 @@ public class UserNode {
             this.topics = topics;
         }
 
-        private MultimediaFile receiveFile() throws Exception{//data transfer with chunking
-            MultimediaFile mf_rcv = (MultimediaFile) this.cbtIn.readObject();
+        private MultimediaFile receiveFile(String val_type) throws Exception{//data transfer with chunking
+
+            MultimediaFile mf_rcv;
+            if(val_type.equals("MULTIF")){
+                mf_rcv = (MultimediaFile) this.cbtIn.readObject();
+            } else {
+                mf_rcv = (Story) this.cbtIn.readObject();
+            }
 
             int size = mf_rcv.getFileSize();// amount of expected chunks
             String filename = mf_rcv.getFilename();// read file name
@@ -450,8 +507,8 @@ public class UserNode {
                         Value v = null;
                         if (val_type.equals("MSG")) {
                             v = (Message) this.cbtIn.readObject();
-                        } else if (val_type.equals("MULTIF")) {
-                            v = this.receiveFile();
+                        } else if (val_type.equals("MULTIF") || val_type.equals("STORY")) {
+                            v = this.receiveFile(val_type);
                         }
 
                         // add to unread queue
@@ -459,7 +516,7 @@ public class UserNode {
                             unreads.put(topic_name, new ArrayList<Value>());
                         unreads.get(topic_name).add(v);
 
-                        System.out.println(TerminalColors.ANSI_GREEN + v.getSentFrom() + "@" + topic_name + ": " + v + TerminalColors.ANSI_RESET);
+
                     } while (!this.cbtIn.readUTF().equals("---"));
 
                     synchronized (this.topics) {
@@ -467,7 +524,13 @@ public class UserNode {
                             Topic localTopic = this.topics.get(topicName);
                             ArrayList<Value> unreadValues = unreads.get(topicName);
                             for (Value val : unreadValues) {
-                                localTopic.addMessage(val);
+                                if(val instanceof Story) {
+                                    localTopic.addStory((Story) val);
+                                    System.out.println(TerminalColors.ANSI_GREEN + val.getSentFrom() + "@" + topicName + ": (STORY) " + val + TerminalColors.ANSI_RESET);
+                                } else{
+                                    localTopic.addMessage(val);
+                                    System.out.println(TerminalColors.ANSI_GREEN + val.getSentFrom() + "@" + topicName + ": " + val + TerminalColors.ANSI_RESET);
+                                }
                             }
                         }
                     }
@@ -487,7 +550,7 @@ public class UserNode {
                 }
 
                 try {
-                    Thread.sleep(500);
+                    Thread.sleep(5000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }

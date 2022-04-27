@@ -4,6 +4,7 @@ import com.simplegram.src.cbt.UserHandler;
 import com.simplegram.src.ibc.BrokerConnection;
 import com.simplegram.src.ibc.ReceiveHandler;
 import com.simplegram.src.ibc.SendHandler;
+import com.simplegram.src.logging.TerminalColors;
 
 import java.io.*;
 import java.net.*;
@@ -29,6 +30,9 @@ public class Broker {
         this.brokerAddresses = new ArrayList<InetAddress>();
         this.brokerConnections = new HashMap<InetAddress,BrokerConnection>();
         readBrokers(brokers_addr_file);
+
+        StoryChecker sc = new StoryChecker(this.topics);
+        sc.start();
     }
 
     private void readBrokers(String filename){
@@ -92,4 +96,6 @@ public class Broker {
         // Start CBT service. -- WARNING, while-true loop in startCBT.
         this.startCommunicationBetweenTerminals();
     }
+
+
 }
