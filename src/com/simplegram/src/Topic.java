@@ -1,5 +1,7 @@
 package com.simplegram.src;
 
+import com.simplegram.src.ibc.BrokerConnection;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -10,6 +12,7 @@ public class Topic {
     private HashMap<String, Integer> indexInStories;
     private ArrayList<Value> messageQueue;
     private ArrayList<Story> storyQueue;
+    private BrokerConnection assignedBroker;
 
     public Topic(String name) {
         this.name = name;
@@ -18,6 +21,14 @@ public class Topic {
         this.storyQueue = new ArrayList<Story>();
         this.indexInTopic = new HashMap<String, Integer>();
         this.indexInStories = new HashMap<String, Integer>();
+    }
+
+    public BrokerConnection getAssignedBroker() {
+        return assignedBroker;
+    }
+
+    public void setAssignedBroker(BrokerConnection assignedBroker) {
+        this.assignedBroker = assignedBroker;
     }
 
     public void addUser(String user) {

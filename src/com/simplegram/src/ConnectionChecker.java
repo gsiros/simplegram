@@ -33,6 +33,8 @@ public class ConnectionChecker extends Thread {
                                 THIS WILL BE DONE BY CONVENTION THAT IS
                                 NOT COMMUNICATION-SPECIFIC (by id maybe?)
                             */
+                            //if (bc.getBrokerAddress())
+
                         }
 
                     }

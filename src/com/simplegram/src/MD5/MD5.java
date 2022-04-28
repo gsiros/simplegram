@@ -44,7 +44,6 @@ public class MD5 {
         *
         * CHR from @Christodoulou for tribute.
         * */
-
         String hash1 = hash("192.168.1.4");
         BigInteger b1 = new BigInteger(hash1,16);
 
@@ -52,6 +51,7 @@ public class MD5 {
         BigInteger topic_dec = new BigInteger(topic,16);
 
         System.out.println(topic_dec.mod(BigInteger.valueOf(3)));
+
 
         /*
         //testing the hash function

@@ -4,13 +4,19 @@ import java.net.InetAddress;
 
 public class BrokerConnection {
     private final InetAddress broker_addr;
+    private int brokerID;
     private boolean isActive;
     private long lastTimeActive;
 
-    public BrokerConnection(InetAddress addr){
+    public BrokerConnection(int brokerID, InetAddress addr){
+        this.brokerID = brokerID;
         this.broker_addr = addr;
         this.isActive = false;
         this.lastTimeActive = -1;
+    }
+
+    public int getBrokerID() {
+        return brokerID;
     }
 
     public InetAddress getBrokerAddress() {

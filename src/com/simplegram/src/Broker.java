@@ -1,5 +1,6 @@
 package com.simplegram.src;
 
+import com.simplegram.src.MD5.MD5;
 import com.simplegram.src.cbt.UserHandler;
 import com.simplegram.src.ibc.BrokerConnection;
 import com.simplegram.src.ibc.ReceiveHandler;
@@ -7,20 +8,23 @@ import com.simplegram.src.ibc.SendHandler;
 import com.simplegram.src.logging.TerminalColors;
 
 import java.io.*;
+import java.math.BigInteger;
 import java.net.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
 
 public class Broker {
-
+    private int brokerID;
     // Broker data structures
     private HashMap<String, Topic> topics;
+
 
     // IBC protocol
     private DatagramSocket ibcSocket;
     private ArrayList<InetAddress> brokerAddresses;
     private HashMap<InetAddress, BrokerConnection> brokerConnections;
+
 
     // CBT protocol
     private ServerSocket cbtSocket;
@@ -31,18 +35,21 @@ public class Broker {
         this.brokerConnections = new HashMap<InetAddress,BrokerConnection>();
         readBrokers(brokers_addr_file);
 
-        StoryChecker sc = new StoryChecker(this.topics);
-        sc.start();
     }
-
     private void readBrokers(String filename){
         File f = new File(filename);
         try {
             Scanner sc = new Scanner(f);
             while(sc.hasNextLine()){
-                InetAddress ia = InetAddress.getByName(sc.nextLine());
-                this.brokerAddresses.add(ia);
-                this.brokerConnections.put(ia, new BrokerConnection(ia));
+                String line = sc.nextLine();
+                String[] data = line.split(",");
+                if (data[1].equals("localhost")){
+                    this.brokerID = Integer.parseInt(data[0]);
+                }else {
+                    InetAddress ia = InetAddress.getByName(data[1]);
+                    this.brokerAddresses.add(ia);
+                    this.brokerConnections.put(ia, new BrokerConnection(Integer.parseInt(data[0]), ia));
+                }
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -50,6 +57,28 @@ public class Broker {
             e.printStackTrace();
         }
     }
+
+    /**
+     * calculates hashCodes of a given topic.
+     * returns the suitable broker.
+     */
+
+    private int getAssignedBroker(String topicName){
+        String hashedInput = MD5.hash(topicName);
+        BigInteger topicDec = new BigInteger(hashedInput,16);
+
+        //we use modulo 3, because we will have 3 brokers.
+        //we need to spread the topics equally to the brokers.
+        int brokerToAssign = topicDec.mod(BigInteger.valueOf(this.brokerConnections.size())).intValue();
+
+        //TODO: fault tolerance
+
+
+
+        return brokerToAssign;
+    }
+
+
 
     /**
      * startInterBrokerCommunication:
@@ -93,6 +122,9 @@ public class Broker {
 
         // Start IBC service.
         this.startInterBrokerCommunication();
+        StoryChecker sc = new StoryChecker(this.topics);
+        sc.start();
+
         // Start CBT service. -- WARNING, while-true loop in startCBT.
         this.startCommunicationBetweenTerminals();
     }
