@@ -2,6 +2,8 @@ package com.simplegram.src;
 
 import com.simplegram.src.ibc.BrokerConnection;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -12,7 +14,7 @@ public class Topic {
     private HashMap<String, Integer> indexInStories;
     private ArrayList<Value> messageQueue;
     private ArrayList<Story> storyQueue;
-    private BrokerConnection assignedBroker;
+    private int assignedBrokerID;
 
     public Topic(String name) {
         this.name = name;
@@ -21,14 +23,15 @@ public class Topic {
         this.storyQueue = new ArrayList<Story>();
         this.indexInTopic = new HashMap<String, Integer>();
         this.indexInStories = new HashMap<String, Integer>();
+        this.assignedBrokerID = -1;
     }
 
-    public BrokerConnection getAssignedBroker() {
-        return assignedBroker;
+    public int getAssignedBrokerID() {
+        return this.assignedBrokerID;
     }
 
-    public void setAssignedBroker(BrokerConnection assignedBroker) {
-        this.assignedBroker = assignedBroker;
+    public void setAssignedBrokerID(int newAssignedBrokerID) {
+        this.assignedBrokerID = newAssignedBrokerID;
     }
 
     public void addUser(String user) {
@@ -92,7 +95,6 @@ public class Topic {
     }
 
     public void cleanStories(){
-        System.out.println(storyQueue.size());
         if(this.storyQueue.size()!=0 && this.storyQueue.get(0).hasExpired()) {
             this.storyQueue.remove(0);
             System.out.println("1 story removed!");

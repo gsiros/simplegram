@@ -8,6 +8,12 @@ public class BrokerConnection {
     private boolean isActive;
     private long lastTimeActive;
 
+    public BrokerConnection(InetAddress addr){
+        this.broker_addr = addr;
+        this.isActive = false;
+        this.lastTimeActive = -1;
+    }
+
     public BrokerConnection(int brokerID, InetAddress addr){
         this.brokerID = brokerID;
         this.broker_addr = addr;

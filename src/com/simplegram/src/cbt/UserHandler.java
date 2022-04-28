@@ -10,19 +10,20 @@ import java.util.HashMap;
 
 public class UserHandler extends Thread {
 
+    private Broker parentBroker;
     private Socket userConSocket;
     private ObjectOutputStream out;
     private ObjectInputStream in;
     private HashMap<String, Topic> topics;
 
-    public UserHandler(Socket userConSocket, HashMap<String, Topic> topics){
+    public UserHandler(Broker parentBroker, Socket userConSocket, HashMap<String, Topic> topics){
+        this.parentBroker = parentBroker;
         this.userConSocket = userConSocket;
         this.topics = topics;
     }
 
     @Override
     public void run() {
-        // TODO: handle user actions
 
         try{
             this.in = new ObjectInputStream(this.userConSocket.getInputStream());
@@ -38,79 +39,148 @@ public class UserHandler extends Thread {
                     // Get user name:
                     String user_name = this.in.readUTF();
                     // Get topic name:
-                    //TODO: CHECK TOPIC HASH IF I AM RESPONSIBLE
                     String topic_name = this.in.readUTF();
-                    // Check if user is allowed to push in this topic.
-                    if (this.topics.get(topic_name).isSubbed(user_name)) {
+                    //TODO: CHECK TOPIC HASH IF I AM RESPONSIBLE
+                    int correctBrokerID = this.parentBroker.getAssignedBroker(topic_name);
 
-                        out.writeUTF("OK");
-                        out.flush();
-
-                        String val_type = this.in.readUTF();
-                        Value incoming_value = null;
-                        if (val_type.equals("MSG")) {
-                            incoming_value = (Message) this.in.readObject();
-                        } else if (val_type.equals("MULTIF") || val_type.equals("STORY")) {
-                            // GET FILE INFO.
-                            incoming_value = receiveFile(val_type);
-                        }
-
-
-                        synchronized (this.topics) {
-                            if (val_type.equals("STORY")){
-                                this.topics.get(topic_name).addStory((Story) incoming_value);
-                            } else {
-                                this.topics.get(topic_name).addMessage(incoming_value);
-                            }
-                        }
-
-
-                        System.out.println(TerminalColors.ANSI_PURPLE + "USR: " + user_name + " pushed value: '" + incoming_value + "' in topic: " + topic_name + " ." + TerminalColors.ANSI_RESET);
+                    if(correctBrokerID != this.parentBroker.getBrokerID()){
+                        // I AM NOT RESPONSIBLE.
+                        // SEND 'DENY'
+                        // SEND THE CORRECT BROKER ID.
+                        this.out.writeUTF("DENY");
+                        this.out.writeUTF(String.valueOf(correctBrokerID));
                     } else {
-                        out.writeUTF("NOK");
+                        // I AM RESPONSIBLE.
+                        // SEND 'CONFIRM'
+                        // CONTINUE...
+
+                        this.out.writeUTF("CONFIRM");
+                        this.out.flush();
+
+                        // Check if user is allowed to push in this topic.
+                        if (this.topics.get(topic_name).isSubbed(user_name)) {
+
+                            out.writeUTF("OK");
+                            out.flush();
+
+                            String val_type = this.in.readUTF();
+                            Value incoming_value = null;
+                            if (val_type.equals("MSG")) {
+                                incoming_value = (Message) this.in.readObject();
+                            } else if (val_type.equals("MULTIF") || val_type.equals("STORY")) {
+                                // GET FILE INFO.
+                                incoming_value = receiveFile(val_type);
+                            }
+
+                            synchronized (this.topics) {
+                                if (val_type.equals("STORY")){
+                                    this.topics.get(topic_name).addStory((Story) incoming_value);
+                                } else {
+                                    this.topics.get(topic_name).addMessage(incoming_value);
+                                }
+                            }
+
+
+                            System.out.println(TerminalColors.ANSI_PURPLE + "USR: " + user_name + " pushed value: '" + incoming_value + "' in topic: " + topic_name + " ." + TerminalColors.ANSI_RESET);
+                        } else {
+                            out.writeUTF("NOK");
+                            out.flush();
+                        }
+
+                        out.writeUTF("END");
                         out.flush();
                     }
-
-                    out.writeUTF("END");
-                    out.flush();
 
 
                 } else if (request.equals("SUB")) {
-                    // TODO: handle SUB action.
                     String user_name = this.in.readUTF();
                     String topic_name = this.in.readUTF();
-                    synchronized (this.topics) {
-                        if (this.topics.keySet().contains(topic_name)) {
-                            this.topics.get(topic_name).addUser(user_name);
-                            this.out.writeUTF("OK");
-                            this.out.flush();
-                            System.out.println(TerminalColors.ANSI_PURPLE + "USR: " + user_name + " subscribed to topic: " + topic_name + "." + TerminalColors.ANSI_RESET);
-                        } else {
 
-                            this.topics.put(topic_name, new Topic(topic_name));
-                            this.topics.get(topic_name).addUser(user_name);
+                    int correctBrokerID = this.parentBroker.getAssignedBroker(topic_name);
 
-                            this.out.writeUTF("NOK");
-                            this.out.flush();
+                    System.out.println(correctBrokerID);
+
+                    System.out.println("Correct broker for topic '"+topic_name+"' is "+correctBrokerID);
+                    //TODO: CHECK TOPIC HASH IF I AM RESPONSIBLE
+                    if(correctBrokerID != this.parentBroker.getBrokerID()){
+                        // I AM NOT RESPONSIBLE.
+                        // SEND 'DENY'
+                        // SEND THE CORRECT BROKER ID.
+                        this.out.writeUTF("DENY");
+                        this.out.flush();
+                        this.out.writeUTF(String.valueOf(correctBrokerID));
+                        this.out.flush();
+
+                    } else {
+                        // I AM RESPONSIBLE.
+                        // SEND 'CONFIRM'
+                        // CONTINUE...
+                        this.out.writeUTF("CONFIRM");
+                        this.out.flush();
+
+
+                        synchronized (this.topics) {
+                            if (this.topics.keySet().contains(topic_name)) {
+                                this.topics.get(topic_name).addUser(user_name);
+                                System.out.println(TerminalColors.ANSI_PURPLE + "USR: " + user_name + " subscribed to topic: " + topic_name + "." + TerminalColors.ANSI_RESET);
+                            } else {
+                                System.out.println("I DONT CRASH");
+
+                                this.topics.put(topic_name, new Topic(topic_name));
+                                this.topics.get(topic_name).addUser(user_name);
+                                this.topics.get(topic_name).setAssignedBrokerID(this.parentBroker.getBrokerID());
+                                System.out.println(TerminalColors.ANSI_PURPLE + "USR: " + user_name + " created topic: " + topic_name + "!" + TerminalColors.ANSI_RESET);
+
+                            }
                         }
+
+                        this.out.writeUTF("OK");
+                        this.out.flush();
+
+                        // TODO: broadcast the changes to all other available brokers.
+
                     }
+
                 }else if (request.equals("UNSUB")) {
 
                     String user_name = this.in.readUTF();
                     String topic_name = this.in.readUTF();
-                    synchronized (this.topics) {
-                        if (this.topics.keySet().contains(topic_name)) {
-                            this.topics.get(topic_name).removeUser(user_name);
-                            this.out.writeUTF("OK");
-                            this.out.flush();
-                            System.out.println(TerminalColors.ANSI_PURPLE + "USR: " + user_name + " unsubscribed to topic: " + topic_name + "." + TerminalColors.ANSI_RESET);
-                        } else {
-                            this.out.writeUTF("NOK");
-                            this.out.flush();
+
+                    int correctBrokerID = this.parentBroker.getAssignedBroker(topic_name);
+
+                    if(correctBrokerID != this.parentBroker.getBrokerID()){
+                        // I AM NOT RESPONSIBLE.
+                        // SEND 'DENY'
+                        // SEND THE CORRECT BROKER ID.
+
+                        this.out.writeUTF("DENY");
+                        this.out.flush();
+                        this.out.writeUTF(String.valueOf(correctBrokerID));
+                        this.out.flush();
+
+                    } else {
+                        // I AM RESPONSIBLE.
+                        // SEND 'CONFIRM'
+                        // CONTINUE...
+                        this.out.writeUTF("CONFIRM");
+                        this.out.flush();
+
+
+                        synchronized (this.topics) {
+                            if (this.topics.keySet().contains(topic_name)) {
+                                this.topics.get(topic_name).removeUser(user_name);
+                                this.out.writeUTF("OK");
+                                this.out.flush();
+                                System.out.println(TerminalColors.ANSI_PURPLE + "USR: " + user_name + " unsubscribed from topic: " + topic_name + "." + TerminalColors.ANSI_RESET);
+                            } else {
+                                this.out.writeUTF("NOK");
+                                this.out.flush();
+                            }
                         }
                     }
+
+
                 } else if (request.equals("PULL")) {
-                    // TODO: handle PULL action.
                     HashMap<String, ArrayList<Value>> unreads = new HashMap<String, ArrayList<Value>>();
                     String user_name = this.in.readUTF();
 
@@ -136,7 +206,7 @@ public class UserHandler extends Thread {
                 }
             }
         }catch (Exception e){
-            //e.printStackTrace();
+            e.printStackTrace();
             this.shutdown();
         }
 

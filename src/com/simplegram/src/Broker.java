@@ -36,6 +36,7 @@ public class Broker {
         readBrokers(brokers_addr_file);
 
     }
+
     private void readBrokers(String filename){
         File f = new File(filename);
         try {
@@ -63,13 +64,13 @@ public class Broker {
      * returns the suitable broker.
      */
 
-    private int getAssignedBroker(String topicName){
+    public int getAssignedBroker(String topicName){
         String hashedInput = MD5.hash(topicName);
         BigInteger topicDec = new BigInteger(hashedInput,16);
 
         //we use modulo 3, because we will have 3 brokers.
         //we need to spread the topics equally to the brokers.
-        int brokerToAssign = topicDec.mod(BigInteger.valueOf(this.brokerConnections.size())).intValue();
+        int brokerToAssign = topicDec.mod(BigInteger.valueOf(this.brokerConnections.size()+1)).intValue();
 
         //TODO: fault tolerance
 
@@ -110,15 +111,13 @@ public class Broker {
 
         while(true){
             Socket userConSocket = this.cbtSocket.accept();
-            UserHandler uh = new UserHandler(userConSocket, this.topics);
+            UserHandler uh = new UserHandler(this, userConSocket, this.topics);
             uh.start();
         }
 
     }
 
     public void startBroker() throws IOException {
-
-        this.topics.put("test", new Topic("test"));
 
         // Start IBC service.
         this.startInterBrokerCommunication();
@@ -129,5 +128,7 @@ public class Broker {
         this.startCommunicationBetweenTerminals();
     }
 
-
+    public int getBrokerID() {
+        return brokerID;
+    }
 }
