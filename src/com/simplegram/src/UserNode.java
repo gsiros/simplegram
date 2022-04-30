@@ -36,23 +36,23 @@ public class UserNode {
     public void userStart() {
 
         try {
-            this.brokerAddresses.add(InetAddress.getByName("localhost"));
-            this.brokerConnections.put(InetAddress.getByName("localhost"), new BrokerConnection(0, InetAddress.getByName("localhost")));
-            this.brokerAddresses.add(InetAddress.getByName("192.168.1.102"));
-            this.brokerConnections.put(InetAddress.getByName("192.168.1.102"), new BrokerConnection(1, InetAddress.getByName("192.168.1.102")));
+            this.brokerAddresses.add(InetAddress.getByName("192.168.1.8"));
+            this.brokerConnections.put(InetAddress.getByName("192.168.1.8"), new BrokerConnection(0, InetAddress.getByName("192.168.1.8")));
+            this.brokerAddresses.add(InetAddress.getByName("192.168.1.9"));
+            this.brokerConnections.put(InetAddress.getByName("192.168.1.9"), new BrokerConnection(1, InetAddress.getByName("192.168.1.9")));
 
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
 
-        this.topics.put("test", new Topic("test"));
-        this.topics.get("test").addUser("george");
-        this.topics.get("test").setAssignedBrokerID(1);
-        this.topics.get("test").addUser("george");
+        //this.topics.put("test", new Topic("test"));
+        //this.topics.get("test").addUser("george");
+        //this.topics.get("test").setAssignedBrokerID(1);
+        //this.topics.get("test").addUser("george");
 
-        this.topics.put("7328465234", new Topic("7328465234"));
-        this.topics.get("7328465234").addUser("george");
-        this.topics.get("7328465234").setAssignedBrokerID(0);
+        //this.topics.put("7328465234", new Topic("7328465234"));
+        //this.topics.get("7328465234").addUser("george");
+        //this.topics.get("7328465234").setAssignedBrokerID(0);
 
         StoryChecker sc = new StoryChecker(this.topics);
         sc.start();
@@ -62,11 +62,11 @@ public class UserNode {
             pullh.start();
         }
 
-        SubToTopicHandler subToTopicHandler = new SubToTopicHandler(this.brokerConnections, this.topics, "george", "test");
+        SubToTopicHandler subToTopicHandler = new SubToTopicHandler(this.brokerConnections, this.topics, "george", "7328465234");
         subToTopicHandler.start();
 
         try {
-            Thread.sleep(10000);
+            Thread.sleep(5000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -75,7 +75,7 @@ public class UserNode {
                 this.brokerConnections,
                 this.topics,
                 "george",
-                "test",
+                "7328465234",
                 new Message("george","Hello chat")
         );
         ph.start();
@@ -85,7 +85,7 @@ public class UserNode {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        /*
+
         ArrayList<byte[]> chunks = UserNode.chunkify("/Users/George/Downloads/sena.jpeg");
         MultimediaFile mystory = new Story("george",
                 "sena.jpeg",
@@ -95,9 +95,10 @@ public class UserNode {
         System.out.println("I sent this at "+mystory.getDateSent());
 
         PushHandler ph2 = new PushHandler(
+                this.brokerConnections,
                 this.topics,
                 "george",
-                "test",
+                "7328465234",
                 mystory
         );
         ph2.start();
@@ -107,7 +108,7 @@ public class UserNode {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
+        /*
 
         MultimediaFile mystory2 = new Story("george",
                 "sena.jpeg",
@@ -121,20 +122,20 @@ public class UserNode {
                 "test",
                 mystory2
         );
-        ph3.start();
+        ph3.start();*/
 
         try {
             Thread.sleep(2000);
         } catch (InterruptedException e) {
             e.printStackTrace();
-        }*/
+        }
 
 
         UnsubFromTopicHandler unsubFromTopicHandler = new UnsubFromTopicHandler(
                 this.brokerConnections,
                 this.topics,
                 "george",
-                "test");
+                "7328465234");
         unsubFromTopicHandler.start();
 
 
@@ -442,15 +443,11 @@ public class UserNode {
         public void run() {
 
             boolean requestComplete = false;
-            int brokerID;
+            int brokerID = (int) (Math.random() * (this.brokerConnections.size()));
             InetAddress brokerAddress = null;
 
 
             while (!requestComplete){
-
-                synchronized (this.topics){
-                    brokerID = this.topics.get(this.topicname).getAssignedBrokerID();
-                }
 
                 synchronized (this.brokerConnections){
                     for(BrokerConnection bc : this.brokerConnections.values()){
@@ -487,6 +484,8 @@ public class UserNode {
                         // the broker is the correct...
                         synchronized (this.topics) {
                             this.topics.put(this.topicname, new Topic(this.topicname));
+                            this.topics.get(this.topicname).setAssignedBrokerID(brokerID);
+                            this.topics.get(this.topicname).addUser(this.username);
                         }
                         String reply = this.cbtIn.readUTF();
                         System.out.println(reply);
@@ -494,9 +493,7 @@ public class UserNode {
                     } else if (confirmationToProceed.equals("DENY")) {
                         // Get correct broker...
                         int correctBrokerToCommTo = Integer.parseInt(this.cbtIn.readUTF());
-                        synchronized (this.topics) {
-                            this.topics.get(topicname).setAssignedBrokerID(correctBrokerToCommTo);
-                        }
+                        brokerID = correctBrokerToCommTo;
                         System.out.println("Broker not responsible for topic... communicating with broker #" + correctBrokerToCommTo);
                     }
 

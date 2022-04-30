@@ -45,7 +45,7 @@ public class MD5 {
         * CHR from @Christodoulou for tribute.
         * */
 
-
+        //7328465234
         String topic = hash("7328465234");
         BigInteger topic_dec = new BigInteger(topic,16);
 
