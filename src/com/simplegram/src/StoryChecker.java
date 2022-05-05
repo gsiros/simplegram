@@ -12,6 +12,10 @@ public class StoryChecker extends Thread {
         this.topics = topics;
     }
 
+    /**
+     * This is method is a daemon that periodically checks if a story has expired
+     * using the 'cleanStories' method of the Topic class.
+     */
     @Override
     public void run() {
 
@@ -30,8 +34,5 @@ public class StoryChecker extends Thread {
         } catch(Exception e) {
 
         }
-
-
-
     }
 }

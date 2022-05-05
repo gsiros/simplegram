@@ -4,6 +4,10 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 
+/**
+ * A simple 'Story' class that contains the required information
+ * for a story in a topic.
+ */
 public class Story extends MultimediaFile implements Serializable {
 
 
@@ -16,6 +20,13 @@ public class Story extends MultimediaFile implements Serializable {
         super(dateSent, sentFrom, filename, fileSize, chunks);
     }
 
+    /**
+     * This method returns the status of a story. It checks if 1 day has
+     * passed since the initial post of the story and if so it declares it
+     * expired so that UserNodes can no longer pull it.
+     *
+     * @return the status of the story [active-true/expired-false]
+     */
     public boolean hasExpired(){
 
         /**

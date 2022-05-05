@@ -7,13 +7,20 @@ import java.net.InetAddress;
 import java.util.HashMap;
 
 public class ConnectionChecker extends Thread {
-
+    // Broker connections data structure.
     private HashMap<InetAddress, BrokerConnection> connections;
 
     public ConnectionChecker(HashMap<InetAddress, BrokerConnection> connections){
         this.connections = connections;
     }
 
+    /**
+     * This method is a daemon that periodically checks every second if an interval
+     * of 5 seconds has passed since the last time that the broker has received a
+     * 'ALIVE' message from its peers. If such an interval has passed and no other
+     * 'ALIVE' message has been received in the meantime, the broker declares its
+     * peer as dead.
+     */
     @Override
     public void run() {
         try {
@@ -27,14 +34,7 @@ public class ConnectionChecker extends Thread {
                         if (bc.isActive() && now - bc.getLastTimeActive() > 5000) {
                             bc.setDead();
                             System.out.println(TerminalColors.ANSI_RED+"Broker " + ia.toString() + " is now dead!"+TerminalColors.ANSI_RESET);
-                            /* TODO: Handle fault tolerance.*/
-                            /* Step 1: define the new broker responsible
-                                     for the sleeper.
-                                THIS WILL BE DONE BY CONVENTION THAT IS
-                                NOT COMMUNICATION-SPECIFIC (by id maybe?)
-                            */
-                            //if (bc.getBrokerAddress())
-
+                            /* TODO: Handle fault tolerance?*/
                         }
 
                     }
