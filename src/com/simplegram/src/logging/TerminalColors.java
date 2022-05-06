@@ -1,5 +1,9 @@
 package com.simplegram.src.logging;
 
+/**
+ * Simple class containing different ANSI values for colored
+ * terminal output used in output logs.
+ */
 public class TerminalColors {
     public static final String ANSI_RESET = "\u001B[0m";
     public static final String ANSI_YELLOW = "\u001B[33m";

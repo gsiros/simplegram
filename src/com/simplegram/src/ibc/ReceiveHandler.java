@@ -8,6 +8,9 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.util.HashMap;
 
+/**
+ * This class handles the 'ALIVE' messages from other brokers.
+ */
 public class ReceiveHandler extends Thread {
 
     private DatagramSocket socket;

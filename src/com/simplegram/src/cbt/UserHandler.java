@@ -8,6 +8,10 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+/**
+ * The core class/thread of the CBT service. The class
+ * handles incoming usernode connections.
+ */
 public class UserHandler extends Thread {
 
     private Broker parentBroker;
@@ -22,6 +26,10 @@ public class UserHandler extends Thread {
         this.topics = topics;
     }
 
+    /**
+     * This method handles all types of UserNode requests; SUB/UNSUB/PUSH/PULL
+     * It updates all the data structures of the broker.
+     */
     @Override
     public void run() {
 
@@ -40,7 +48,6 @@ public class UserHandler extends Thread {
                     String user_name = this.in.readUTF();
                     // Get topic name:
                     String topic_name = this.in.readUTF();
-                    //TODO: CHECK TOPIC HASH IF I AM RESPONSIBLE
                     int correctBrokerID = this.parentBroker.getAssignedBroker(topic_name);
 
                     if(correctBrokerID != this.parentBroker.getBrokerID()){
@@ -101,7 +108,6 @@ public class UserHandler extends Thread {
                     System.out.println(correctBrokerID);
 
                     System.out.println("Correct broker for topic '"+topic_name+"' is "+correctBrokerID);
-                    //TODO: CHECK TOPIC HASH IF I AM RESPONSIBLE
                     if(correctBrokerID != this.parentBroker.getBrokerID()){
                         // I AM NOT RESPONSIBLE.
                         // SEND 'DENY'
@@ -137,7 +143,7 @@ public class UserHandler extends Thread {
                         this.out.writeUTF("OK");
                         this.out.flush();
 
-                        // TODO: broadcast the changes to all other available brokers.
+                        // TODO: broadcast the changes to all other available brokers..? (Fault Tolerance)
 
                     }
 
@@ -212,9 +218,14 @@ public class UserHandler extends Thread {
 
     }
 
+    /**
+     * This method is used during the usernode's pull request in order
+     * to send an unread value from a topic.
+     * @param topic_name the topic name of the unread value
+     * @param v the unread value of the topic
+     */
     private void send(String topic_name, Value v) {
 
-        // TODO: send the message to user node...
         try {
             // TOPIC NAME
             this.out.writeUTF(topic_name);
@@ -250,6 +261,11 @@ public class UserHandler extends Thread {
 
     }
 
+    /**
+     * This method is used by the 'send' method in order to send a multimedia
+     * file in CHUNKS and not whole.
+     * @param mf2send the MultimediaFile object to send
+     */
     private void sendFile(MultimediaFile mf2send){
         try {
             int bytes = 0;
@@ -264,7 +280,7 @@ public class UserHandler extends Thread {
                          mf2send.getSentFrom(),
                          mf2send.getFilename(),
                          chunks.size(),
-                         new ArrayList<byte[]>()
+                         new ArrayList<byte[]>() // empty file
                  );
              } else {
                  mf2send_empty = new MultimediaFile(
@@ -272,11 +288,13 @@ public class UserHandler extends Thread {
                          mf2send.getSentFrom(),
                          mf2send.getFilename(),
                          chunks.size(),
-                         new ArrayList<byte[]>()
+                         new ArrayList<byte[]>() // empty file
                  );
              }
 
-
+            // ATTENTION: Only the MultimediaFile's metadata are
+            // sent as an object. NOT THE CHUNKS. The chunks are
+            // sent separately.
             out.writeObject(mf2send_empty);
             out.flush();
 
@@ -291,10 +309,22 @@ public class UserHandler extends Thread {
         }
     }
 
+    /**
+     * This method is used by UserHandler in order to receive the chunks of a
+     * multimediafile.
+     * @param val_type
+     * @return MultimediaFile
+     * @throws Exception
+     */
     private MultimediaFile receiveFile(String val_type) throws Exception{//data transfer with chunking
 
         MultimediaFile mf_rcv;
 
+        /*
+        * ATTENTION! ONLY the metadata of the multimedia object is
+        * received with readObject().
+        * The chunks are received separately.
+        * */
         if(val_type.equals("MULTIF")){
             mf_rcv = (MultimediaFile) in.readObject();
         } else {
@@ -316,6 +346,10 @@ public class UserHandler extends Thread {
         return mf_rcv;
     }
 
+    /**
+     * This method is used in order to shutdown the connection
+     * between the Broker and the UserNode.
+     */
     private void shutdown(){
         try {
             in.close();

@@ -3,6 +3,9 @@ package com.simplegram.src.ibc;
 import java.io.IOException;
 import java.net.*;
 
+/**
+ * This class sends 'ALIVE' packets to a broker.
+ */
 public class SendHandler extends Thread {
 
     private DatagramSocket socket;

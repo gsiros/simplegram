@@ -8,6 +8,11 @@ import java.net.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+/**
+ * Basic class that contains all necessary information
+ * and data structures for terminals in order to communicate
+ * with brokers.
+ */
 public class UserNode {
 
     // Local data structures
@@ -18,21 +23,22 @@ public class UserNode {
     private ArrayList<InetAddress> brokerAddresses;
     private HashMap<InetAddress, BrokerConnection> brokerConnections;
 
-    private Socket cbtSocket;
-
     public static void main(String[] args) {
         UserNode un = new UserNode();
         un.userStart();
     }
 
-
     public UserNode() {
-
         this.topics = new HashMap<String, Topic>();
         this.brokerAddresses = new ArrayList<InetAddress>();
         this.brokerConnections = new HashMap<InetAddress, BrokerConnection>();
     }
 
+    /**
+     * TODO: remove from final version.
+     * This is an experimental method that will likely not
+     * make it in the final release of the project.
+     */
     public void userStart() {
 
         try {
@@ -156,7 +162,11 @@ public class UserNode {
 
     }
 
-    // Break file to chunks...
+    /**
+     * This method is used to break a multimediafile in chunks.
+     * @param path the multimedia file path
+     * @return ArrayList of chunk. Each chunk is a byte array.
+     */
     static ArrayList<byte[]> chunkify(String path) {
 
         ArrayList<byte[]> chunks = new ArrayList<byte[]>();
@@ -181,19 +191,15 @@ public class UserNode {
         return chunks;
     }
 
-    public void shutdown() {
-        try {
-            if (!this.cbtSocket.isClosed()) {
-                this.cbtSocket.close();
-            }
 
-        } catch (IOException e) {
-            //
-        }
-    }
+
+
 
     // PUBLISHER FAMILY THREADS
 
+    /**
+     * This is the parent class for handling Publisher-oriented actions.
+     */
     class PublisherHandler extends Thread {
 
         Socket cbtSocket;
@@ -220,6 +226,9 @@ public class UserNode {
 
     }
 
+    /**
+     * This class handles the terminal's 'PUSH' request to a broker.
+     */
     class PushHandler extends PublisherHandler {
 
         HashMap<InetAddress, BrokerConnection> brokerConnections;
@@ -233,6 +242,11 @@ public class UserNode {
             this.brokerConnections = brokerConnections;
         }
 
+        /**
+         * This method is used to push a multimedia file to a topic.
+         * It sends the multimedia file's metadata and chunks separately.
+         * @param mf2send the multimediafile object
+         */
         private void sendFile(MultimediaFile mf2send){
             try {
                 int bytes = 0;
@@ -406,6 +420,9 @@ public class UserNode {
 
     // SUBSCRIBER FAMILY THREADS:
 
+    /**
+     * This is the parent class for handling Subscriber-oriented actions.
+     */
     class SubscriberHandler extends Thread {
         Socket cbtSocket;
         ObjectInputStream cbtIn;
@@ -421,6 +438,9 @@ public class UserNode {
 
     }
 
+    /**
+     * This class handles the terminal's 'SUB' request to a broker.
+     */
     class SubToTopicHandler extends SubscriberHandler {
 
         String topicname;
@@ -543,6 +563,9 @@ public class UserNode {
         }
     }
 
+    /**
+     * This class handles the terminal's 'UNSUB' request to a broker.
+     */
     class UnsubFromTopicHandler extends SubscriberHandler {
 
         String topicname;
@@ -671,11 +694,13 @@ public class UserNode {
         }
     }
 
+    /**
+     * This class handles the terminal's 'PULL' request to a broker.
+     */
     class PullHandler extends SubscriberHandler {
 
         HashMap<String, Topic> topics;
         BrokerConnection brokerConnection;
-
 
         public PullHandler(
                 BrokerConnection brokerConnection,
@@ -687,6 +712,13 @@ public class UserNode {
             this.brokerConnection = brokerConnection;
         }
 
+        /**
+         * This method is used in order to receive a multimedia file
+         * from a broker.
+         * @param val_type the type of multimedia file to receive [MULTIF/STORY]
+         * @return MultimediaFile object
+         * @throws Exception
+         */
         private MultimediaFile receiveFile(String val_type) throws Exception{//data transfer with chunking
 
             MultimediaFile mf_rcv;
@@ -711,6 +743,10 @@ public class UserNode {
             return mf_rcv;
         }
 
+        /**
+         * This method is a daemon that periodically pulls the latest values
+         * from a broker.
+         */
         @Override
         public void run() {
 
@@ -719,7 +755,7 @@ public class UserNode {
             while(true) {
                 //if(brokerConnection.isActive()){
                 try {
-                    // TODO: if timeout then make broker dead.
+                    // TODO: if timeout then make broker dead. Might not make it in the final version.
                     String brokerIp = this.brokerConnection.getBrokerAddress().toString().split("/")[1];
                     this.cbtSocket = new Socket();
                     this.cbtSocket.connect(new InetSocketAddress(brokerIp, 5001), 3000);
@@ -771,6 +807,7 @@ public class UserNode {
                     }
 
                 } catch(SocketTimeoutException ste) {
+                    // TODO: Fault tolerance? Might not make it in the final version.
                     /*synchronized (brokerConnection){
                         brokerConnection.setDead();
                     }*/
@@ -798,11 +835,8 @@ public class UserNode {
                 }
             }
 
-
             //}
 
         }
     }
-
-
 }

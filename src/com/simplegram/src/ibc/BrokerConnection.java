@@ -2,6 +2,10 @@ package com.simplegram.src.ibc;
 
 import java.net.InetAddress;
 
+/**
+ * This class is used to contain all necessary information
+ * regarding a broker.
+ */
 public class BrokerConnection {
     private final InetAddress broker_addr;
     private int brokerID;
@@ -45,8 +49,6 @@ public class BrokerConnection {
     public long getLastTimeActive() {
         return this.lastTimeActive;
     }
-
-
 
 }
 
