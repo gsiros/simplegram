@@ -7,6 +7,7 @@ import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Scanner;
 
 /**
  * Basic class that contains all necessary information
@@ -15,6 +16,8 @@ import java.util.HashMap;
  */
 public class UserNode {
 
+    private String username;
+    
     // Local data structures
     private HashMap<String, Topic> topics;
 
@@ -23,143 +26,20 @@ public class UserNode {
     private ArrayList<InetAddress> brokerAddresses;
     private HashMap<InetAddress, BrokerConnection> brokerConnections;
 
-    public static void main(String[] args) {
-        UserNode un = new UserNode();
-        un.userStart();
-    }
 
-    public UserNode() {
+    public UserNode(String username) {
+        this.username = username;
         this.topics = new HashMap<String, Topic>();
         this.brokerAddresses = new ArrayList<InetAddress>();
         this.brokerConnections = new HashMap<InetAddress, BrokerConnection>();
     }
 
     /**
-     * TODO: remove from final version.
-     * This is an experimental method that will likely not
-     * make it in the final release of the project.
+     * This method starts the various daemon threads.
      */
     public void userStart() {
-
-        try {
-            this.brokerAddresses.add(InetAddress.getByName("192.168.1.8"));
-            this.brokerConnections.put(InetAddress.getByName("192.168.1.8"), new BrokerConnection(0, InetAddress.getByName("192.168.1.8")));
-            this.brokerAddresses.add(InetAddress.getByName("192.168.1.9"));
-            this.brokerConnections.put(InetAddress.getByName("192.168.1.9"), new BrokerConnection(1, InetAddress.getByName("192.168.1.9")));
-
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        }
-
-        //this.topics.put("test", new Topic("test"));
-        //this.topics.get("test").addUser("george");
-        //this.topics.get("test").setAssignedBrokerID(1);
-        //this.topics.get("test").addUser("george");
-
-        //this.topics.put("7328465234", new Topic("7328465234"));
-        //this.topics.get("7328465234").addUser("george");
-        //this.topics.get("7328465234").setAssignedBrokerID(0);
-
         StoryChecker sc = new StoryChecker(this.topics);
         sc.start();
-
-        for(BrokerConnection bc : this.brokerConnections.values()){
-            PullHandler pullh = new PullHandler(bc,this.topics, "george");
-            pullh.start();
-        }
-
-        SubToTopicHandler subToTopicHandler = new SubToTopicHandler(this.brokerConnections, this.topics, "george", "7328465234");
-        subToTopicHandler.start();
-
-        try {
-            Thread.sleep(5000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        PushHandler ph = new PushHandler(
-                this.brokerConnections,
-                this.topics,
-                "george",
-                "7328465234",
-                new Message("george","Hello chat")
-        );
-        ph.start();
-
-        try {
-            Thread.sleep(2000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        ArrayList<byte[]> chunks = UserNode.chunkify("/Users/George/Downloads/sena.jpeg");
-        MultimediaFile mystory = new Story("george",
-                "sena.jpeg",
-                chunks.size(),
-                chunks
-        );
-        System.out.println("I sent this at "+mystory.getDateSent());
-
-        PushHandler ph2 = new PushHandler(
-                this.brokerConnections,
-                this.topics,
-                "george",
-                "7328465234",
-                mystory
-        );
-        ph2.start();
-
-        try {
-            Thread.sleep(10000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        /*
-
-        MultimediaFile mystory2 = new Story("george",
-                "sena.jpeg",
-                chunks.size(),
-                chunks
-        );
-
-        PushHandler ph3 = new PushHandler(
-                this.topics,
-                "george",
-                "test",
-                mystory2
-        );
-        ph3.start();*/
-
-        try {
-            Thread.sleep(2000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-
-        UnsubFromTopicHandler unsubFromTopicHandler = new UnsubFromTopicHandler(
-                this.brokerConnections,
-                this.topics,
-                "george",
-                "7328465234");
-        unsubFromTopicHandler.start();
-
-
-        //ArrayList<byte[]> rex_chunks = this.chunkify("/Users/George/Documents/Photos/rex.jpg");
-
-        /*PubHandler ph2 = new PubHandler(
-                this.topics,
-                "george",
-                "test",
-                new MultimediaFile(
-                        "george",
-                        "rex.jpg",
-                        rex_chunks.size(),
-                        rex_chunks
-                )
-        );
-        ph2.start();*/
-
     }
 
     /**
@@ -191,12 +71,158 @@ public class UserNode {
         return chunks;
     }
 
+    // API methods
+    /**
+     *
+     * CURRENT VERSION;
+     * This method is used in order to load all broker addresses
+     * and ids in usernode.
+     *
+     * FINAL VERSION;
+     * This method is used in order to setup the usernode object
+     * with already existing configuration settings.
+     * ex. broker addresses, topics subscribed, messages, etc...
+     *
+     * @param configFilePath the file path of the broker addresses
+     */
+    public void init(String configFilePath){
+        // TODO: load configuration data from Android app.
+        // ex. topics already subscribed, etc...
+        // Load broker addresses
+        File f = new File(configFilePath);
+        try {
+            Scanner sc = new Scanner(f);
+            while(sc.hasNextLine()){
+                String line = sc.nextLine();
+                String[] data = line.split(",");
+
+                InetAddress ia = InetAddress.getByName(data[1]);
+                this.brokerAddresses.add(ia);
+                this.brokerConnections.put(ia, new BrokerConnection(Integer.parseInt(data[0]), ia));
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
 
 
+    }
+    /**
+     * This method is used by the terminal in order to push
+     * a new text message to a topic.
+     * @param topicname the name of the topic to publish to
+     * @param text the text message to publish
+     */
+    public void pushMessage(String topicname, String text){
+        PushHandler ph2 = new PushHandler(
+                this.brokerConnections,
+                this.topics,
+                this.username,
+                topicname,
+                new Message(this.username,text)
+        );
+        ph2.start();
+    }
 
+    /**
+     * This method is used by the terminal in order to push
+     * a new Multimedia File to a topic.
+     * @param topicname the name of the topic to publish to
+     * @param filepath the path of the multimedia file to publish
+     */
+    public void pushMultimediaFile(String topicname, String filepath){
+        String[] filepath_components = filepath.split("/");
+        String filename = filepath_components[filepath_components.length - 1];
+        ArrayList<byte[]> mf_chunks = this.chunkify(filepath);
+        PushHandler ph2 = new PushHandler(
+                this.brokerConnections,
+                this.topics,
+                this.username,
+                topicname,
+                new MultimediaFile(
+                        this.username,
+                        filename,
+                        mf_chunks.size(),
+                        mf_chunks
+                )
+        );
+        ph2.start();
+    }
+
+    /**
+     * This method is used by the terminal in order to push
+     * a new Story to a topic.
+     * @param topicname the name of the topic to publish to
+     * @param filepath the path of the story source file to publish
+     */
+    public void pushStory(String topicname, String filepath){
+        String[] filepath_components = filepath.split("/");
+        String filename = filepath_components[filepath_components.length - 1];
+        ArrayList<byte[]> mf_chunks = this.chunkify(filepath);
+        PushHandler ph2 = new PushHandler(
+                this.brokerConnections,
+                this.topics,
+                this.username,
+                topicname,
+                new Story(
+                        this.username,
+                        filename,
+                        mf_chunks.size(),
+                        mf_chunks
+                )
+        );
+        ph2.start();
+    }
+
+    /**
+     * This method is used by the terminal in order to subscribe
+     * to a topic.
+     * @param topicname the name of the topic to subscribe to
+     */
+    public void sub(String topicname){
+        SubToTopicHandler subToTopicHandler = new SubToTopicHandler(
+                this.brokerConnections,
+                this.topics,
+                this.username,
+                topicname
+        );
+        subToTopicHandler.start();
+    }
+
+    /**
+     * This method is used by the terminal in order to unsubscribe
+     * from a topic. If the user is not subscribed to the topic, the
+     * method has no effect.
+     * @param topicname the name of the topic to unsubscribe from
+     */
+    public void unsub(String topicname){
+        synchronized (this.topics){
+            if(!this.topics.get(topicname).isSubbed(this.username)){
+                return;
+            }
+        }
+        UnsubFromTopicHandler unsubFromTopicHandler = new UnsubFromTopicHandler(
+                this.brokerConnections,
+                this.topics,
+                this.username,
+                topicname
+        );
+        unsubFromTopicHandler.start();
+    }
+
+    /**
+     * This method is a daemon that pulls the latest unread messages
+     * from all the brokers in the network.
+     */
+    public void pull(){
+        for(BrokerConnection bc : this.brokerConnections.values()){
+            PullHandler pullh = new PullHandler(bc,this.topics, this.username);
+            pullh.start();
+        }
+    }
 
     // PUBLISHER FAMILY THREADS
-
     /**
      * This is the parent class for handling Publisher-oriented actions.
      */
@@ -419,7 +445,6 @@ public class UserNode {
 
 
     // SUBSCRIBER FAMILY THREADS:
-
     /**
      * This is the parent class for handling Subscriber-oriented actions.
      */

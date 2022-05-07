@@ -130,8 +130,6 @@ public class UserHandler extends Thread {
                                 this.topics.get(topic_name).addUser(user_name);
                                 System.out.println(TerminalColors.ANSI_PURPLE + "USR: " + user_name + " subscribed to topic: " + topic_name + "." + TerminalColors.ANSI_RESET);
                             } else {
-                                System.out.println("I DONT CRASH");
-
                                 this.topics.put(topic_name, new Topic(topic_name));
                                 this.topics.get(topic_name).addUser(user_name);
                                 this.topics.get(topic_name).setAssignedBrokerID(this.parentBroker.getBrokerID());
@@ -212,7 +210,7 @@ public class UserHandler extends Thread {
                 }
             }
         }catch (Exception e){
-            e.printStackTrace();
+            //e.printStackTrace();
             this.shutdown();
         }
 
