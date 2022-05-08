@@ -22,7 +22,8 @@ public class StoryChecker extends Thread {
         try{
 
             while(true){
-                System.out.println(TerminalColors.ANSI_CYAN+"Cleaning expired stories..."+TerminalColors.ANSI_RESET);
+                // TODO: debug
+                //System.out.println(TerminalColors.ANSI_CYAN+"Cleaning expired stories..."+TerminalColors.ANSI_RESET);
                 synchronized (this.topics) {
                     for(Topic topic : this.topics.values()){
                         topic.cleanStories();

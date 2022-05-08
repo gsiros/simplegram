@@ -222,6 +222,20 @@ public class UserNode {
         }
     }
 
+    /**
+     * This method is for demo usage only. It displays all unread values for the user.
+     */
+    public void printUnreads() {
+        synchronized (this.topics){
+            for(Topic topic : this.topics.values()){
+                ArrayList<Value> unreads = topic.getLatestFor(this.username);
+                for(Value val : unreads){
+                    System.out.println(TerminalColors.ANSI_GREEN + val.getSentFrom() + "@" + topic.getName() + ": " + val + TerminalColors.ANSI_RESET);
+                }
+            }
+        }
+    }
+
     // PUBLISHER FAMILY THREADS
     /**
      * This is the parent class for handling Publisher-oriented actions.
@@ -340,7 +354,7 @@ public class UserNode {
                     }
 
                     String brokerIp = brokerAddress.toString().split("/")[1];
-                    System.out.println("Attempting to send to Broker with IP: "+brokerIp);
+                    //System.out.println("Attempting to send to Broker with IP: "+brokerIp);
                     this.cbtSocket = new Socket();
                     this.cbtSocket.connect(new InetSocketAddress(brokerIp, 5001), 3000);
                     this.cbtOut = new ObjectOutputStream(cbtSocket.getOutputStream());
@@ -383,7 +397,7 @@ public class UserNode {
                         }
 
                         String brokerReply = this.cbtIn.readUTF();
-                        System.out.println(brokerReply);
+                        //System.out.println(brokerReply);
                         requestComplete = true;
 
                     } else {
@@ -392,35 +406,35 @@ public class UserNode {
                         synchronized (this.topics) {
                             this.topics.get(target_topic).setAssignedBrokerID(correctBrokerToCommTo);
                         }
-                        System.out.println("Broker not responsible for topic... communicating with broker #" + correctBrokerToCommTo);
+                        //System.out.println("Broker not responsible for topic... communicating with broker #" + correctBrokerToCommTo);
                     }
 
 
 
                 } catch(SocketTimeoutException ste) {
-                    ste.printStackTrace();
-                    System.out.println("TIMEOUT Broker unreachable or dead...");
+                    //ste.printStackTrace();
+                    //System.out.println("TIMEOUT Broker unreachable or dead...");
                     synchronized (this.topics) {
                         Topic t = this.topics.get(target_topic);
-                        System.out.println("previous BrokerID: "+t.getAssignedBrokerID());
+                        //System.out.println("previous BrokerID: "+t.getAssignedBrokerID());
                         t.setAssignedBrokerID((t.getAssignedBrokerID() + 1) % (this.brokerConnections.size()));
-                        System.out.println("next BrokerID: "+t.getAssignedBrokerID());
+                        //System.out.println("next BrokerID: "+t.getAssignedBrokerID());
                     }
-                    System.out.println("Assigning to next alive broker and trying again...");
+                    //System.out.println("Assigning to next alive broker and trying again...");
 
                 } catch(ConnectException ce){
                     ce.printStackTrace();
-                    System.out.println("Broker unreachable or dead...");
+                    //System.out.println("Broker unreachable or dead...");
                     synchronized (this.topics) {
                         Topic t = this.topics.get(target_topic);
-                        System.out.println("previous BrokerID: "+t.getAssignedBrokerID());
+                        //System.out.println("previous BrokerID: "+t.getAssignedBrokerID());
                         t.setAssignedBrokerID((t.getAssignedBrokerID() + 1) % (this.brokerConnections.size()));
-                        System.out.println("next BrokerID: "+t.getAssignedBrokerID());
+                        //System.out.println("next BrokerID: "+t.getAssignedBrokerID());
                     }
-                    System.out.println("Assigning to next alive broker and trying again...");
+                    //System.out.println("Assigning to next alive broker and trying again...");
 
                 }catch (Exception e) {
-                    e.printStackTrace();
+                    //e.printStackTrace();
                 } finally {
                     try {
                         if (this.cbtIn != null)
@@ -507,7 +521,8 @@ public class UserNode {
                     }
 
                     String brokerIp = brokerAddress.toString().split("/")[1];
-                    System.out.println("Attempting to send to Broker with IP: "+brokerIp);
+                    // TODO: debug
+                    //System.out.println("Attempting to send to Broker with IP: "+brokerIp);
                     this.cbtSocket = new Socket();
                     this.cbtSocket.connect(new InetSocketAddress(brokerIp, 5001), 3000);
                     this.cbtOut = new ObjectOutputStream(cbtSocket.getOutputStream());
@@ -533,40 +548,42 @@ public class UserNode {
                             this.topics.get(this.topicname).addUser(this.username);
                         }
                         String reply = this.cbtIn.readUTF();
-                        System.out.println(reply);
+                        //TODO: debug
+                        //System.out.println(reply);
                         requestComplete = true;
                     } else if (confirmationToProceed.equals("DENY")) {
                         // Get correct broker...
                         int correctBrokerToCommTo = Integer.parseInt(this.cbtIn.readUTF());
                         brokerID = correctBrokerToCommTo;
-                        System.out.println("Broker not responsible for topic... communicating with broker #" + correctBrokerToCommTo);
+                        // TODO: debug
+                        //System.out.println("Broker not responsible for topic... communicating with broker #" + correctBrokerToCommTo);
                     }
 
 
                 } catch(SocketTimeoutException ste) {
-                    ste.printStackTrace();
-                    System.out.println("TIMEOUT Broker unreachable or dead...");
+                    //ste.printStackTrace();
+                    //System.out.println("TIMEOUT Broker unreachable or dead...");
                     synchronized (this.topics) {
                         Topic t = this.topics.get(topicname);
-                        System.out.println("previous BrokerID: "+t.getAssignedBrokerID());
+                        //System.out.println("previous BrokerID: "+t.getAssignedBrokerID());
                         t.setAssignedBrokerID((t.getAssignedBrokerID() + 1) % (this.brokerConnections.size()));
-                        System.out.println("next BrokerID: "+t.getAssignedBrokerID());
+                        //System.out.println("next BrokerID: "+t.getAssignedBrokerID());
                     }
-                    System.out.println("Assigning to next alive broker and trying again...");
+                    //System.out.println("Assigning to next alive broker and trying again...");
 
                 } catch(ConnectException ce){
                     ce.printStackTrace();
-                    System.out.println("Broker unreachable or dead...");
+                    //System.out.println("Broker unreachable or dead...");
                     synchronized (this.topics) {
                         Topic t = this.topics.get(topicname);
-                        System.out.println("previous BrokerID: "+t.getAssignedBrokerID());
+                        //System.out.println("previous BrokerID: "+t.getAssignedBrokerID());
                         t.setAssignedBrokerID((t.getAssignedBrokerID() + 1) % (this.brokerConnections.size()));
-                        System.out.println("next BrokerID: "+t.getAssignedBrokerID());
+                        //System.out.println("next BrokerID: "+t.getAssignedBrokerID());
                     }
-                    System.out.println("Assigning to next alive broker and trying again...");
+                    //System.out.println("Assigning to next alive broker and trying again...");
 
                 }catch (Exception e) {
-                    e.printStackTrace();
+                    //e.printStackTrace();
                 } finally {
                     try {
                         if (this.cbtIn != null)
@@ -579,7 +596,7 @@ public class UserNode {
                             }
                         }
                     }catch (IOException e){
-                        e.printStackTrace();
+                        //e.printStackTrace();
                     }
                 }
             }
@@ -637,7 +654,7 @@ public class UserNode {
                     }
 
                     String brokerIp = brokerAddress.toString().split("/")[1];
-                    System.out.println("Attempting to send to Broker with IP: "+brokerIp);
+                    //System.out.println("Attempting to send to Broker with IP: "+brokerIp);
                     this.cbtSocket = new Socket();
                     this.cbtSocket.connect(new InetSocketAddress(brokerIp, 5001), 3000);
                     this.cbtOut = new ObjectOutputStream(cbtSocket.getOutputStream());
@@ -662,41 +679,41 @@ public class UserNode {
                         }
 
                         String reply = this.cbtIn.readUTF();
-                        System.out.println(reply);
+                        //System.out.println(reply);
                         requestComplete = true;
                     } else if (confirmationToProceed.equals("DENY")){
                         int correctBrokerToCommTo = Integer.parseInt(this.cbtIn.readUTF());
                         synchronized (this.topics) {
                             this.topics.get(topicname).setAssignedBrokerID(correctBrokerToCommTo);
                         }
-                        System.out.println("Broker not responsible for topic... communicating with broker #" + correctBrokerToCommTo);
+                        //System.out.println("Broker not responsible for topic... communicating with broker #" + correctBrokerToCommTo);
                     }
 
 
                 } catch(SocketTimeoutException ste) {
                     ste.printStackTrace();
-                    System.out.println("TIMEOUT Broker unreachable or dead...");
+                    //System.out.println("TIMEOUT Broker unreachable or dead...");
                     synchronized (this.topics) {
                         Topic t = this.topics.get(topicname);
-                        System.out.println("previous BrokerID: "+t.getAssignedBrokerID());
+                        //System.out.println("previous BrokerID: "+t.getAssignedBrokerID());
                         t.setAssignedBrokerID((t.getAssignedBrokerID() + 1) % (this.brokerConnections.size()));
-                        System.out.println("next BrokerID: "+t.getAssignedBrokerID());
+                        //System.out.println("next BrokerID: "+t.getAssignedBrokerID());
                     }
-                    System.out.println("Assigning to next alive broker and trying again...");
+                    //System.out.println("Assigning to next alive broker and trying again...");
 
                 } catch(ConnectException ce){
                     ce.printStackTrace();
-                    System.out.println("Broker unreachable or dead...");
+                    //System.out.println("Broker unreachable or dead...");
                     synchronized (this.topics) {
                         Topic t = this.topics.get(topicname);
-                        System.out.println("previous BrokerID: "+t.getAssignedBrokerID());
+                        //System.out.println("previous BrokerID: "+t.getAssignedBrokerID());
                         t.setAssignedBrokerID((t.getAssignedBrokerID() + 1) % (this.brokerConnections.size()));
-                        System.out.println("next BrokerID: "+t.getAssignedBrokerID());
+                        //System.out.println("next BrokerID: "+t.getAssignedBrokerID());
                     }
-                    System.out.println("Assigning to next alive broker and trying again...");
+                    //System.out.println("Assigning to next alive broker and trying again...");
 
                 }catch (Exception e) {
-                    e.printStackTrace();
+                    //e.printStackTrace();
                 } finally {
                     try {
                         if (this.cbtIn != null)
@@ -709,7 +726,7 @@ public class UserNode {
                             }
                         }
                     }catch (IOException e){
-                        e.printStackTrace();
+                        //e.printStackTrace();
                     }
                 }
 
@@ -786,7 +803,8 @@ public class UserNode {
                     this.cbtSocket.connect(new InetSocketAddress(brokerIp, 5001), 3000);
                     this.cbtOut = new ObjectOutputStream(cbtSocket.getOutputStream());
                     this.cbtIn = new ObjectInputStream(cbtSocket.getInputStream());
-                    System.out.println("Pulling recent values from Broker #" + brokerConnection.getBrokerID() + " (" + brokerIp + ")");
+                    // TODO: debug
+                    //System.out.println("Pulling recent values from Broker #" + brokerConnection.getBrokerID() + " (" + brokerIp + ")");
                     HashMap<String, ArrayList<Value>> unreads = new HashMap<String, ArrayList<Value>>();
 
                     this.cbtOut.writeUTF("PULL");
@@ -822,10 +840,12 @@ public class UserNode {
                             for (Value val : unreadValues) {
                                 if (val instanceof Story) {
                                     localTopic.addStory((Story) val);
-                                    System.out.println(TerminalColors.ANSI_GREEN + val.getSentFrom() + "@" + topicName + ": (STORY) " + val + TerminalColors.ANSI_RESET);
+                                    //TODO: debug
+                                    //System.out.println(TerminalColors.ANSI_GREEN + val.getSentFrom() + "@" + topicName + ": (STORY) " + val + TerminalColors.ANSI_RESET);
                                 } else {
                                     localTopic.addMessage(val);
-                                    System.out.println(TerminalColors.ANSI_GREEN + val.getSentFrom() + "@" + topicName + ": " + val + TerminalColors.ANSI_RESET);
+                                    // TODO: debug
+                                    //System.out.println(TerminalColors.ANSI_GREEN + val.getSentFrom() + "@" + topicName + ": " + val + TerminalColors.ANSI_RESET);
                                 }
                             }
                         }
@@ -838,7 +858,7 @@ public class UserNode {
                     }*/
                     System.out.println("PULL FAIL: Broker #" + brokerConnection.getBrokerID()+" (" + brokerConnection.getBrokerAddress().toString()+") might be dead...");
                 }catch (Exception e) {
-                    e.printStackTrace();
+                    //e.printStackTrace();
                 } finally {
                     try{
                         if(this.cbtIn!=null)
@@ -850,7 +870,7 @@ public class UserNode {
                                 this.cbtSocket.close();
                             }
                     }catch (IOException e){
-                        e.printStackTrace();
+                        //e.printStackTrace();
                     }
                 }
                 try {
