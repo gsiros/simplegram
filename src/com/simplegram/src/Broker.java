@@ -31,13 +31,12 @@ public class Broker {
     // CBT (Communication Between Terminals) protocol
     private ServerSocket cbtSocket;
 
-    public Broker(String brokers_addr_file){
+    public Broker(int brokerID){
         // Initialization of data structures:
+        this.brokerID = brokerID;
         this.topics = new HashMap<String, Topic>();
         this.brokerAddresses = new ArrayList<InetAddress>();
         this.brokerConnections = new HashMap<InetAddress,BrokerConnection>();
-        // Initialization of broker connections from file:
-        readBrokers(brokers_addr_file);
     }
 
     /**
@@ -46,16 +45,14 @@ public class Broker {
      * @param filename - the path of the configuration file.
      * @return Nothing.
      */
-    private void readBrokers(String filename){
+    public void init(String filename){
         File f = new File(filename);
         try {
             Scanner sc = new Scanner(f);
             while(sc.hasNextLine()){
                 String line = sc.nextLine();
                 String[] data = line.split(",");
-                if (data[1].equals("localhost")){
-                    this.brokerID = Integer.parseInt(data[0]);
-                }else {
+                if (Integer.parseInt(data[0]) != this.brokerID){
                     InetAddress ia = InetAddress.getByName(data[1]);
                     this.brokerAddresses.add(ia);
                     this.brokerConnections.put(ia, new BrokerConnection(Integer.parseInt(data[0]), ia));
