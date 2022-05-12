@@ -48,9 +48,13 @@ public class UserHandler extends Thread {
                     String user_name = this.in.readUTF();
                     // Get topic name:
                     String topic_name = this.in.readUTF();
+
+                    // Get node type [USR/BRK] USR: user, BRK: broker
+                    String node_type = this.in.readUTF();
+
                     int correctBrokerID = this.parentBroker.getAssignedBroker(topic_name);
 
-                    if(correctBrokerID != this.parentBroker.getBrokerID()){
+                    if(node_type.equals("USR") && correctBrokerID != this.parentBroker.getBrokerID()){
                         // I AM NOT RESPONSIBLE.
                         // SEND 'DENY'
                         // SEND THE CORRECT BROKER ID.
@@ -102,13 +106,14 @@ public class UserHandler extends Thread {
                 } else if (request.equals("SUB")) {
                     String user_name = this.in.readUTF();
                     String topic_name = this.in.readUTF();
-
+                    // Get node type [USR/BRK] USR: user, BRK: broker
+                    String node_type = this.in.readUTF();
                     int correctBrokerID = this.parentBroker.getAssignedBroker(topic_name);
 
                     System.out.println(correctBrokerID);
 
                     System.out.println("Correct broker for topic '"+topic_name+"' is "+correctBrokerID);
-                    if(correctBrokerID != this.parentBroker.getBrokerID()){
+                    if(node_type.equals("USR") && correctBrokerID != this.parentBroker.getBrokerID()){
                         // I AM NOT RESPONSIBLE.
                         // SEND 'DENY'
                         // SEND THE CORRECT BROKER ID.
@@ -149,10 +154,11 @@ public class UserHandler extends Thread {
 
                     String user_name = this.in.readUTF();
                     String topic_name = this.in.readUTF();
-
+                    // Get node type [USR/BRK] USR: user, BRK: broker
+                    String node_type = this.in.readUTF();
                     int correctBrokerID = this.parentBroker.getAssignedBroker(topic_name);
 
-                    if(correctBrokerID != this.parentBroker.getBrokerID()){
+                    if(node_type.equals("USR") && correctBrokerID != this.parentBroker.getBrokerID()){
                         // I AM NOT RESPONSIBLE.
                         // SEND 'DENY'
                         // SEND THE CORRECT BROKER ID.

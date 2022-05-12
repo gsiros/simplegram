@@ -26,12 +26,34 @@ public class UserNode {
     private ArrayList<InetAddress> brokerAddresses;
     private HashMap<InetAddress, BrokerConnection> brokerConnections;
 
+    private String node_type;
+
 
     public UserNode(String username) {
         this.username = username;
+        this.node_type = "USR";
         this.topics = new HashMap<String, Topic>();
         this.brokerAddresses = new ArrayList<InetAddress>();
         this.brokerConnections = new HashMap<InetAddress, BrokerConnection>();
+    }
+
+    public UserNode(HashMap<String, Topic> topics, ArrayList<InetAddress> brokerAddresses, HashMap<InetAddress, BrokerConnection> brokerConnections) {
+        this.node_type = "BRK";
+        this.topics = topics;
+        this.brokerAddresses = brokerAddresses;
+        this.brokerConnections = brokerConnections;
+    }
+
+    public HashMap<String, Topic> getTopics() {
+        return topics;
+    }
+
+    public ArrayList<InetAddress> getBrokerAddresses() {
+        return brokerAddresses;
+    }
+
+    public HashMap<InetAddress, BrokerConnection> getBrokerConnections() {
+        return brokerConnections;
     }
 
     /**

@@ -13,14 +13,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
 
-public class Broker {
+public class Broker extends UserNode {
     // variable to store Broker ID.
     private int brokerID;
     // Data structure to hold all the topics
     // that the broker is responsible for.
     // ex. topics['topic_name'] -> Topic()
     private HashMap<String, Topic> topics;
-
 
     // IBC (InterBroker Communication) protocol
     private DatagramSocket ibcSocket;
@@ -31,13 +30,14 @@ public class Broker {
     // CBT (Communication Between Terminals) protocol
     private ServerSocket cbtSocket;
 
-    public Broker(String brokers_addr_file){
+    public Broker(int brokerID){
+        super(new HashMap<String, Topic>(), new ArrayList<InetAddress>(), new HashMap<InetAddress,BrokerConnection>());
         // Initialization of data structures:
-        this.topics = new HashMap<String, Topic>();
-        this.brokerAddresses = new ArrayList<InetAddress>();
-        this.brokerConnections = new HashMap<InetAddress,BrokerConnection>();
-        // Initialization of broker connections from file:
-        readBrokers(brokers_addr_file);
+        this.brokerID = brokerID;
+        this.topics = super.getTopics();
+        this.brokerAddresses = super.getBrokerAddresses();
+        this.brokerConnections = super.getBrokerConnections();
+        // Initialization of broker connections from file:;
     }
 
     /**
@@ -46,27 +46,11 @@ public class Broker {
      * @param filename - the path of the configuration file.
      * @return Nothing.
      */
-    private void readBrokers(String filename){
-        File f = new File(filename);
-        try {
-            Scanner sc = new Scanner(f);
-            while(sc.hasNextLine()){
-                String line = sc.nextLine();
-                String[] data = line.split(",");
-                if (data[1].equals("localhost")){
-                    this.brokerID = Integer.parseInt(data[0]);
-                }else {
-                    InetAddress ia = InetAddress.getByName(data[1]);
-                    this.brokerAddresses.add(ia);
-                    this.brokerConnections.put(ia, new BrokerConnection(Integer.parseInt(data[0]), ia));
-                }
-            }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        }
+    public void init(String filename){
+        super.init(filename);
+        brokerConnections.remove(brokerAddresses.remove(brokerID));// remove itself from broker connections
     }
+
 
     /**
      * This method is used to hash the name of the topic and
@@ -81,10 +65,17 @@ public class Broker {
 
         //we use modulo 3, because we will have 3 brokers.
         //we need to spread the topics equally to the brokers.
-        int brokerToAssign = topicDec.mod(BigInteger.valueOf(this.brokerConnections.size()+1)).intValue();
+        int brokerIDToAssign = topicDec.mod(BigInteger.valueOf(this.brokerConnections.size()+1)).intValue();
+        BrokerConnection brokerToAssign;
+        synchronized (this.brokerConnections){
+            brokerToAssign = this.brokerConnections.get(this.brokerAddresses.get(brokerIDToAssign));
+            while(!brokerToAssign.isActive()){
+                brokerIDToAssign = (brokerIDToAssign + 1) % (this.brokerConnections.size()+1);
+                brokerToAssign = this.brokerConnections.get(this.brokerAddresses.get(brokerIDToAssign));
+            }
+        }
+        return brokerIDToAssign;
 
-        //TODO: fault tolerance?
-        return brokerToAssign;
     }
 
 
@@ -142,10 +133,10 @@ public class Broker {
      */
     public void startBroker() throws IOException {
 
+        super.userStart();
+
         // Start IBC service.
         this.startInterBrokerCommunication();
-        StoryChecker sc = new StoryChecker(this.topics);
-        sc.start();
 
         // Start CBT service. -- WARNING, while-true loop in startCBT.
         this.startCommunicationBetweenTerminals();
