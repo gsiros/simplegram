@@ -1,6 +1,7 @@
 package com.simplegram.src.cbt;
 
 import com.simplegram.src.*;
+import com.simplegram.src.ibc.BrokerConnection;
 import com.simplegram.src.logging.TerminalColors;
 
 import java.io.*;
