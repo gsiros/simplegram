@@ -2,6 +2,7 @@ package com.simplegram.src;
 
 import com.simplegram.src.MD5.MD5;
 import com.simplegram.src.cbt.UserHandler;
+import com.simplegram.src.frs.FRSController;
 import com.simplegram.src.ibc.BrokerConnection;
 import com.simplegram.src.ibc.ReceiveHandler;
 import com.simplegram.src.ibc.SendHandler;
@@ -27,9 +28,10 @@ public class Broker {
     private ArrayList<InetAddress> brokerAddresses;
     private HashMap<InetAddress, BrokerConnection> brokerConnections;
 
-
     // CBT (Communication Between Terminals) protocol
     private ServerSocket cbtSocket;
+
+    private FRSController frsController;
 
     public Broker(int brokerID){
         // Initialization of data structures:
@@ -37,6 +39,7 @@ public class Broker {
         this.topics = new HashMap<String, Topic>();
         this.brokerAddresses = new ArrayList<InetAddress>();
         this.brokerConnections = new HashMap<InetAddress,BrokerConnection>();
+        this.frsController = new FRSController(this.topics, this.brokerAddresses, this.brokerConnections);
     }
 
     /**
@@ -80,11 +83,13 @@ public class Broker {
         //we need to spread the topics equally to the brokers.
         int brokerIDToAssign = topicDec.mod(BigInteger.valueOf(this.brokerConnections.size()+1)).intValue();
         BrokerConnection brokerToAssign;
-        synchronized (this.brokerConnections){
-            brokerToAssign = this.brokerConnections.get(this.brokerAddresses.get(brokerIDToAssign));
-            while(!brokerToAssign.isActive()){
-                brokerIDToAssign = (brokerIDToAssign + 1) % (this.brokerConnections.size()+1);
+        if(brokerIDToAssign != this.brokerID){
+            synchronized (this.brokerConnections){
                 brokerToAssign = this.brokerConnections.get(this.brokerAddresses.get(brokerIDToAssign));
+                while(!brokerToAssign.isActive()){
+                    brokerIDToAssign = (brokerIDToAssign + 1) % (this.brokerConnections.size()+1);
+                    brokerToAssign = this.brokerConnections.get(this.brokerAddresses.get(brokerIDToAssign));
+                }
             }
         }
         return brokerIDToAssign;
@@ -151,11 +156,17 @@ public class Broker {
         StoryChecker sc = new StoryChecker(this.topics);
         sc.start();
 
+        this.frsController.startFaultRecoveryService();
+
         // Start CBT service. -- WARNING, while-true loop in startCBT.
         this.startCommunicationBetweenTerminals();
     }
 
     public int getBrokerID() {
         return brokerID;
+    }
+
+    public FRSController getFRS() {
+        return this.frsController;
     }
 }

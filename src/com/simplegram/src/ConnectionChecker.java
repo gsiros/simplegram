@@ -26,7 +26,7 @@ public class ConnectionChecker extends Thread {
         try {
             while (true) {
                 Thread.sleep(1000);
-                System.out.println(TerminalColors.ANSI_BLUE+"Checking for inactive connections..."+TerminalColors.ANSI_RESET);
+                //System.out.println(TerminalColors.ANSI_BLUE+"Checking for inactive connections..."+TerminalColors.ANSI_RESET);
                 synchronized (this.connections) {
                     long now = System.currentTimeMillis();
                     for (InetAddress ia : this.connections.keySet()) {

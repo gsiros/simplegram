@@ -87,6 +87,13 @@ public class UserHandler extends Thread {
                                 }
                             }
 
+                            if(val_type.equals("MSG")){
+                                this.parentBroker.getFRS().broadcastPush(user_name, topic_name, (Message) incoming_value);
+                            } else if(val_type.equals("MULTIF")){
+                                this.parentBroker.getFRS().broadcastPush(user_name, topic_name, (MultimediaFile) incoming_value);
+                            } else if (val_type.equals("STORY")){
+                                this.parentBroker.getFRS().broadcastPush(user_name, topic_name, (Story) incoming_value);
+                            }
 
                             System.out.println(TerminalColors.ANSI_PURPLE + "USR: " + user_name + " pushed value: '" + incoming_value + "' in topic: " + topic_name + " ." + TerminalColors.ANSI_RESET);
                         } else {
@@ -141,8 +148,7 @@ public class UserHandler extends Thread {
                         this.out.writeUTF("OK");
                         this.out.flush();
 
-                        // TODO: broadcast the changes to all other available brokers..? (Fault Tolerance)
-
+                        this.parentBroker.getFRS().broadcastSub(user_name, topic_name);
                     }
 
                 }else if (request.equals("UNSUB")) {
@@ -176,6 +182,7 @@ public class UserHandler extends Thread {
                                 this.out.writeUTF("OK");
                                 this.out.flush();
                                 System.out.println(TerminalColors.ANSI_PURPLE + "USR: " + user_name + " unsubscribed from topic: " + topic_name + "." + TerminalColors.ANSI_RESET);
+                                this.parentBroker.getFRS().broadcastUnSub(user_name, topic_name);
                             } else {
                                 this.out.writeUTF("NOK");
                                 this.out.flush();
@@ -188,7 +195,7 @@ public class UserHandler extends Thread {
                     HashMap<String, ArrayList<Value>> unreads = new HashMap<String, ArrayList<Value>>();
                     String user_name = this.in.readUTF();
 
-                    System.out.println(TerminalColors.ANSI_PURPLE + "USR: " + user_name + " issued a pull request!" + TerminalColors.ANSI_RESET);
+                    //System.out.println(TerminalColors.ANSI_PURPLE + "USR: " + user_name + " issued a pull request!" + TerminalColors.ANSI_RESET);
                     synchronized (this.topics) {
                         for (Topic t : this.topics.values()) {
                             if (t.isSubbed(user_name)) {
@@ -350,11 +357,11 @@ public class UserHandler extends Thread {
      */
     private void shutdown(){
         try {
-            in.close();
-            out.close();
             if(!this.userConSocket.isClosed()){
                 this.userConSocket.close();
             }
+            in.close();
+            out.close();
         }catch (Exception e){
             e.printStackTrace();
         }
