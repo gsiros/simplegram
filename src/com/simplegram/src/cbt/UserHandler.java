@@ -142,7 +142,7 @@ public class UserHandler extends Thread {
                         this.out.flush();
 
                         // TODO: broadcast the changes to all other available brokers..? (Fault Tolerance)
-
+                        //Create an FRS (Failure Recovery Service) Thread for each Broker in brokerConnections
                     }
 
                 }else if (request.equals("UNSUB")) {
