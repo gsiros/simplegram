@@ -81,10 +81,17 @@ public class Broker {
 
         //we use modulo 3, because we will have 3 brokers.
         //we need to spread the topics equally to the brokers.
-        int brokerToAssign = topicDec.mod(BigInteger.valueOf(this.brokerConnections.size()+1)).intValue();
+        int brokerIDToAssign = topicDec.mod(BigInteger.valueOf(this.brokerConnections.size()+1)).intValue();
+        BrokerConnection brokerToAssign;
+        synchronized (this.brokerConnections){
+            brokerToAssign = this.brokerConnections.get(this.brokerAddresses.get(brokerIDToAssign));
+            while(!brokerToAssign.isActive()){
+                brokerIDToAssign = (brokerIDToAssign + 1) % (this.brokerConnections.size()+1);
+                brokerToAssign = this.brokerConnections.get(this.brokerAddresses.get(brokerIDToAssign));
+            }
+        }
+        return brokerIDToAssign;
 
-        //TODO: fault tolerance?
-        return brokerToAssign;
     }
 
 
