@@ -8,10 +8,15 @@ import java.util.HashMap;
 
 public class ConnectionChecker extends Thread {
     // Broker connections data structure.
+    private Broker parent;
     private HashMap<InetAddress, BrokerConnection> connections;
+    private HashMap<String, Topic> topics;
 
-    public ConnectionChecker(HashMap<InetAddress, BrokerConnection> connections){
+    public ConnectionChecker(Broker parent, HashMap<InetAddress, BrokerConnection> connections, HashMap<String, Topic> topics
+    ){
+        this.parent = parent;
         this.connections = connections;
+        this.topics = topics;
     }
 
     /**
@@ -35,6 +40,13 @@ public class ConnectionChecker extends Thread {
                             bc.setDead();
                             System.out.println(TerminalColors.ANSI_RED+"Broker " + ia.toString() + " is now dead!"+TerminalColors.ANSI_RESET);
                             /* TODO: Handle fault tolerance?*/
+                            synchronized (this.topics){
+                                for (Topic t : this.topics.values()){
+                                    if(bc.getBrokerID() == t.getAssignedBrokerID()){
+                                        t.setAssignedBrokerID(this.parent.getAssignedBroker(t.getName()));
+                                    }
+                                }
+                            }
                         }
 
                     }

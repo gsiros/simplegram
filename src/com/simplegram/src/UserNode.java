@@ -427,9 +427,9 @@ public class UserNode {
                     //System.out.println("Broker unreachable or dead...");
                     synchronized (this.topics) {
                         Topic t = this.topics.get(target_topic);
-                        //System.out.println("previous BrokerID: "+t.getAssignedBrokerID());
+                        System.out.println("previous BrokerID: "+t.getAssignedBrokerID());
                         t.setAssignedBrokerID((t.getAssignedBrokerID() + 1) % (this.brokerConnections.size()));
-                        //System.out.println("next BrokerID: "+t.getAssignedBrokerID());
+                        System.out.println("next BrokerID: "+t.getAssignedBrokerID());
                     }
                     //System.out.println("Assigning to next alive broker and trying again...");
 
