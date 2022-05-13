@@ -88,7 +88,10 @@ public class Broker {
                 brokerToAssign = this.brokerConnections.get(this.brokerAddresses.get(brokerIDToAssign));
                 while(!brokerToAssign.isActive()){
                     brokerIDToAssign = (brokerIDToAssign + 1) % (this.brokerConnections.size()+1);
+                    if(brokerIDToAssign == this.brokerID)
+                        return brokerIDToAssign;
                     brokerToAssign = this.brokerConnections.get(this.brokerAddresses.get(brokerIDToAssign));
+
                 }
             }
         }

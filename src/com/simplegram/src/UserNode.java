@@ -428,7 +428,7 @@ public class UserNode {
                     synchronized (this.topics) {
                         Topic t = this.topics.get(target_topic);
                         //System.out.println("previous BrokerID: "+t.getAssignedBrokerID());
-                        //t.setAssignedBrokerID((t.getAssignedBrokerID() + 1) % (this.brokerConnections.size()));
+                        t.setAssignedBrokerID((t.getAssignedBrokerID() + 1) % (this.brokerConnections.size()));
                         //System.out.println("next BrokerID: "+t.getAssignedBrokerID());
                         System.out.println(t.getAssignedBrokerID());
                     }
