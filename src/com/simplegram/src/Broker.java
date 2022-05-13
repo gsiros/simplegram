@@ -110,7 +110,7 @@ public class Broker {
     private void startInterBrokerCommunication() throws SocketException {
         this.ibcSocket = new DatagramSocket(4444);
 
-        ConnectionChecker cc = new ConnectionChecker(this.brokerConnections);
+        ConnectionChecker cc = new ConnectionChecker(this, this.brokerConnections, this.topics);
         cc.start();
 
         ReceiveHandler rh = new ReceiveHandler(this.ibcSocket, this.brokerConnections);
