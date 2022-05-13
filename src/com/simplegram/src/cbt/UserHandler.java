@@ -198,7 +198,7 @@ public class UserHandler extends Thread {
                     //System.out.println(TerminalColors.ANSI_PURPLE + "USR: " + user_name + " issued a pull request!" + TerminalColors.ANSI_RESET);
                     synchronized (this.topics) {
                         for (Topic t : this.topics.values()) {
-                            if (t.isSubbed(user_name)) {
+                            if (t.isSubbed(user_name) && t.getAssignedBrokerID() == this.parentBroker.getBrokerID()) {
                                 unreads.put(t.getName(), t.getLatestFor(user_name));
                             }
                         }
