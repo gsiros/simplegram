@@ -22,6 +22,7 @@ public class FRSRequestHandler extends Thread {
             ArrayList<InetAddress> brokerAddresses,
             HashMap<String, Topic> topics
     ){
+        this.brokerAddresses = brokerAddresses;
         this.frsReqSocket = frsReqSocket;
         this.topics = topics;
     }
@@ -174,7 +175,7 @@ public class FRSRequestHandler extends Thread {
                 }
             }
         }catch (Exception e){
-            //e.printStackTrace();
+            e.printStackTrace();
             this.shutdown();
         }
 

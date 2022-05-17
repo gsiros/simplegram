@@ -299,7 +299,7 @@ public class FRSController {
 
                 String brokerIp = this.brokerConnection.getBrokerAddress().toString().split("/")[1];
                 // TODO: debug
-                //System.out.println("Attempting to send to Broker with IP: "+brokerIp);
+                System.out.println("Attempting to broadcast to Broker with IP: "+brokerIp);
                 this.frsSocket = new Socket();
                 this.frsSocket.connect(new InetSocketAddress(brokerIp, 5002), 3000);
                 this.frsOut = new ObjectOutputStream(frsSocket.getOutputStream());
@@ -320,22 +320,24 @@ public class FRSController {
                 if (confirmationToProceed.equals("CONFIRM")) {
                     String reply = this.frsIn.readUTF();
                     //TODO: debug
-                    //System.out.println(reply);
+
+                    System.out.println(reply);
                 } else if (confirmationToProceed.equals("DENY")) {
                     // Get correct broker...
                     int correctBrokerToCommTo = Integer.parseInt(this.frsIn.readUTF());
                     // TODO: debug
                     //System.out.println("Broker not responsible for topic... communicating with broker #" + correctBrokerToCommTo);
+                    System.out.println("DENY received");
                 }
 
 
             } catch(SocketTimeoutException ste) {
-                //ste.printStackTrace();
+                ste.printStackTrace();
                 //System.out.println("TIMEOUT Broker unreachable or dead...");
                 //System.out.println("Assigning to next alive broker and trying again...");
 
             } catch(ConnectException ce){
-                //ce.printStackTrace();
+                ce.printStackTrace();
                 //System.out.println("Broker unreachable or dead...");
                 //System.out.println("Assigning to next alive broker and trying again...");
 
