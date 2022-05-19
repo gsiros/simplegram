@@ -10,16 +10,19 @@ import java.io.ObjectOutputStream;
 import java.net.*;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Random;
 
 /**
- * Failure Recovery Service (FRS) Controller class.
+ * Failure Recovery System (FRS) Controller class.
  */
 public class FRSController {
 
     private HashMap<String, Topic> topics;
     private ArrayList<InetAddress> brokerAddresses;
     private HashMap<InetAddress, BrokerConnection> brokerConnections;
-    
+
+    private HashMap<InetAddress, ArrayList<Thread>> outgoingRequests;
+
     // Public Interface
     public FRSController(
             HashMap<String, Topic> topics,
@@ -29,6 +32,10 @@ public class FRSController {
         this.topics = topics;
         this.brokerAddresses = brokerAddresses;
         this.brokerConnections = brokerConnections;
+        this.outgoingRequests = new HashMap<InetAddress, ArrayList<Thread>>();
+        for(InetAddress ie : this.brokerAddresses){
+            this.outgoingRequests.put(ie, new ArrayList<Thread>());
+        }
     }
 
     public void broadcastSub(String username, String topicname){
@@ -39,7 +46,10 @@ public class FRSController {
                     username,
                     topicname
             );
-            subToTopicHandler.start();
+            ArrayList<Thread> outgoings = this.outgoingRequests.get(br.getBrokerAddress());
+            synchronized (outgoings){
+                outgoings.add(subToTopicHandler);
+            }
         }
     }
 
@@ -51,26 +61,75 @@ public class FRSController {
                     username,
                     topicname
             );
-            unsubFromTopicHandler.start();
+            ArrayList<Thread> outgoings = this.outgoingRequests.get(br.getBrokerAddress());
+            synchronized (outgoings){
+                outgoings.add(unsubFromTopicHandler);
+            }
         }
     }
 
     public void broadcastPush(String username, String topicname, Value value){
         for (BrokerConnection br : this.brokerConnections.values()) {
-            PushHandler ph2 = new PushHandler(
+            PushHandler pushRequest = new PushHandler(
                     br,
                     this.topics,
                     username,
                     topicname,
                     value
             );
-            ph2.start();
+            ArrayList<Thread> outgoings = this.outgoingRequests.get(br.getBrokerAddress());
+            synchronized (outgoings){
+                outgoings.add(pushRequest);
+            }
         }
     }
     
-    public void startFaultRecoveryService(){
+    public void startFaultRecoverySystem(){
+
+        // Request TMZ Briefing
+        int random_index = new Random().nextInt(this.brokerAddresses.size());
+        BrokerConnection randomBrokerConnection = this.brokerConnections.get(this.brokerAddresses.get(random_index));
+        while(!randomBrokerConnection.isActive()){
+            random_index = new Random().nextInt(this.brokerAddresses.size());
+            randomBrokerConnection = this.brokerConnections.get(this.brokerAddresses.get(random_index));
+        }
+        PullHandler pullHandler = new PullHandler(randomBrokerConnection, this.topics);
+        pullHandler.run(); //THIS THREAD MUST FINISH BEFORE OTHERS ARE CREATED.
+
         FRService frs = new FRService(this.brokerAddresses, this.topics);
         frs.start();
+
+        for(BrokerConnection brc : this.brokerConnections.values()){
+            ArrayList<Thread> outgoings = this.outgoingRequests.get(brc.getBrokerAddress());
+            OutgoingScheduler outgoingDispatcher = new OutgoingScheduler(outgoings);
+            outgoingDispatcher.start();
+        }
+
+    }
+
+    class OutgoingScheduler extends Thread {
+
+        private ArrayList<Thread> outgoings;
+
+        public OutgoingScheduler(ArrayList<Thread> outgoings){
+            this.outgoings = outgoings;
+        }
+
+        @Override
+        public void run(){
+            while(true){
+                synchronized (this.outgoings){
+                    if(!this.outgoings.isEmpty()){
+                        Thread firstCome = this.outgoings.get(0);
+                        if(firstCome.getState() == State.NEW){
+                            firstCome.start();
+                        } else if(firstCome.getState() == State.TERMINATED){
+                            this.outgoings.remove(0);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // PUBLISHER FAMILY THREADS
@@ -333,7 +392,7 @@ public class FRSController {
 
             } catch(SocketTimeoutException ste) {
                 ste.printStackTrace();
-                //System.out.println("TIMEOUT Broker unreachable or dead...");
+                System.out.println("TIMEOUT Broker unreachable or dead...");
                 //System.out.println("Assigning to next alive broker and trying again...");
 
             } catch(ConnectException ce){
@@ -466,43 +525,11 @@ public class FRSController {
 
         public PullHandler(
                 BrokerConnection brokerConnection,
-                HashMap<String, Topic> topics,
-                String username
+                HashMap<String, Topic> topics
         ) {
-            super(username);
+            super(null);
             this.topics = topics;
             this.brokerConnection = brokerConnection;
-        }
-
-        /**
-         * This method is used in order to receive a multimedia file
-         * from a broker.
-         * @param val_type the type of multimedia file to receive [MULTIF/STORY]
-         * @return MultimediaFile object
-         * @throws Exception
-         */
-        private MultimediaFile receiveFile(String val_type) throws Exception{//data transfer with chunking
-
-            MultimediaFile mf_rcv;
-            if(val_type.equals("MULTIF")){
-                mf_rcv = (MultimediaFile) this.frsIn.readObject();
-            } else {
-                mf_rcv = (Story) this.frsIn.readObject();
-            }
-
-            int size = mf_rcv.getFileSize();// amount of expected chunks
-            String filename = mf_rcv.getFilename();// read file name
-
-            FileOutputStream fileOutputStream = new FileOutputStream(filename);
-            byte[] buffer = new byte[512*1024]; //512 * 2^10 (512KByte chunk size)
-
-            while (size>0) {
-                this.frsIn.readFully(buffer, 0, 512*1024);
-                fileOutputStream.write(buffer,0,512*1024);
-                size --;
-            }
-            fileOutputStream.close();
-            return mf_rcv;
         }
 
         /**
@@ -512,94 +539,62 @@ public class FRSController {
         @Override
         public void run() {
 
+            //if(brokerConnection.isActive()){
+            try {
+                String brokerIp = this.brokerConnection.getBrokerAddress().toString().split("/")[1];
+                this.frsSocket = new Socket();
+                this.frsSocket.connect(new InetSocketAddress(brokerIp, 5002), 3000);
+                this.frsOut = new ObjectOutputStream(frsSocket.getOutputStream());
+                this.frsIn = new ObjectInputStream(frsSocket.getInputStream());
+                int reply = Integer.MIN_VALUE; // reply option
+                String topicname = null;
+                // Send request:
+                this.frsOut.writeUTF("PULL");
+                this.frsOut.flush();
 
-
-            while(true) {
-                //if(brokerConnection.isActive()){
-                try {
-                    // TODO: if timeout then make broker dead. Might not make it in the final version.
-                    String brokerIp = this.brokerConnection.getBrokerAddress().toString().split("/")[1];
-                    this.frsSocket = new Socket();
-                    this.frsSocket.connect(new InetSocketAddress(brokerIp, 5002), 3000);
-                    this.frsOut = new ObjectOutputStream(frsSocket.getOutputStream());
-                    this.frsIn = new ObjectInputStream(frsSocket.getInputStream());
-                    // TODO: debug
-                    //System.out.println("Pulling recent values from Broker #" + brokerConnection.getBrokerID() + " (" + brokerIp + ")");
-                    HashMap<String, ArrayList<Value>> unreads = new HashMap<String, ArrayList<Value>>();
-
-                    this.frsOut.writeUTF("PULL");
-                    this.frsOut.flush();
-
-                    this.frsOut.writeUTF(this.username);
-                    this.frsOut.flush();
-
-                    do {
-                        String topic_name = this.frsIn.readUTF();
-                        if (topic_name.equals("---"))
-                            break;
-                        String val_type = this.frsIn.readUTF();
-                        Value v = null;
-                        if (val_type.equals("MSG")) {
-                            v = (Message) this.frsIn.readObject();
-                        } else if (val_type.equals("MULTIF") || val_type.equals("STORY")) {
-                            v = this.receiveFile(val_type);
-                        }
-
-                        // add to unread queue
-                        if (unreads.get(topic_name) == null)
-                            unreads.put(topic_name, new ArrayList<Value>());
-                        unreads.get(topic_name).add(v);
-
-
-                    } while (!this.frsIn.readUTF().equals("---"));
-
-                    synchronized (this.topics) {
-                        for (String topicName : unreads.keySet()) {
-                            Topic localTopic = this.topics.get(topicName);
-                            ArrayList<Value> unreadValues = unreads.get(topicName);
-                            for (Value val : unreadValues) {
-                                if (val instanceof Story) {
-                                    localTopic.addStory((Story) val);
-                                    //TODO: debug
-                                    //System.out.println(TerminalColors.ANSI_GREEN + val.getSentFrom() + "@" + topicName + ": (STORY) " + val + TerminalColors.ANSI_RESET);
-                                } else {
-                                    localTopic.addMessage(val);
-                                    // TODO: debug
-                                    //System.out.println(TerminalColors.ANSI_GREEN + val.getSentFrom() + "@" + topicName + ": " + val + TerminalColors.ANSI_RESET);
-                                }
+                while(reply != -1){
+                    reply = this.frsIn.readInt();
+                    if(reply == 0){
+                        // Create new topic.
+                        topicname = this.frsIn.readUTF();
+                        synchronized (this.topics){
+                            if(!this.topics.keySet().contains(topicname)){
+                                this.topics.put(topicname, new Topic(topicname));
                             }
                         }
-                    }
-
-                } catch(SocketTimeoutException ste) {
-                    // TODO: Fault tolerance? Might not make it in the final version.
-                    /*synchronized (brokerConnection){
-                        brokerConnection.setDead();
-                    }*/
-                    System.out.println("PULL FAIL: Broker #" + brokerConnection.getBrokerID()+" (" + brokerConnection.getBrokerAddress().toString()+") might be dead...");
-                }catch (Exception e) {
-                    //e.printStackTrace();
-                } finally {
-                    try{
-                        if(this.frsIn!=null)
-                            this.frsIn.close();
-                        if(this.frsOut!=null)
-                            this.frsOut.close();
-                        if(this.frsSocket != null)
-                            if (!this.frsSocket.isClosed()){
-                                this.frsSocket.close();
+                    } else if(reply == 1){
+                        String sub_name = this.frsIn.readUTF();
+                        Topic topic = this.topics.get(topicname);
+                        synchronized (topic){
+                            if(!topic.isSubbed(sub_name)){
+                                topic.addUser(sub_name);
                             }
-                    }catch (IOException e){
-                        //e.printStackTrace();
+                        }
                     }
                 }
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+
+            } catch(SocketTimeoutException ste) {
+                // TODO: Fault tolerance? Might not make it in the final version.
+                /*synchronized (brokerConnection){
+                    brokerConnection.setDead();
+                }*/
+                System.out.println("PULL FAIL: Broker #" + brokerConnection.getBrokerID()+" (" + brokerConnection.getBrokerAddress().toString()+") might be dead...");
+            }catch (Exception e) {
+                //e.printStackTrace();
+            } finally {
+                try{
+                    if(this.frsIn!=null)
+                        this.frsIn.close();
+                    if(this.frsOut!=null)
+                        this.frsOut.close();
+                    if(this.frsSocket != null)
+                        if (!this.frsSocket.isClosed()){
+                            this.frsSocket.close();
+                        }
+                }catch (IOException e){
+                    //e.printStackTrace();
                 }
             }
-
             //}
 
         }

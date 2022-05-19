@@ -329,7 +329,6 @@ public class UserNode {
 
         @Override
         public void run() {
-
             boolean requestComplete = false;
             int brokerID;
             InetAddress brokerAddress = null;

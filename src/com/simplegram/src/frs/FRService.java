@@ -1,7 +1,6 @@
 package com.simplegram.src.frs;
 
 import com.simplegram.src.Topic;
-import com.simplegram.src.cbt.UserHandler;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -26,7 +25,6 @@ public class FRService extends Thread {
         // Bind server tcp socket:
         try {
             this.frsSocket = new ServerSocket(5002);
-
             while(true){
                 Socket frsBrokerSocket = this.frsSocket.accept();
                 FRSRequestHandler frsRequestHandler = new FRSRequestHandler(frsBrokerSocket, this.brokerAddresses, this.topics);

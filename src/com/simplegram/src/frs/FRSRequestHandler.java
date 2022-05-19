@@ -149,25 +149,31 @@ public class FRSRequestHandler extends Thread {
 
 
                 } else if (request.equals("PULL")) {
-                    // TODO: IMPLEMENT...
-                    HashMap<String, ArrayList<Value>> unreads = new HashMap<String, ArrayList<Value>>();
-                    String user_name = this.in.readUTF();
+                    // For each topic:
+                    for (Topic topic : this.topics.values()){
+                        // Send topic name
+                        this.out.writeInt(0); // expect topic name
+                        this.out.flush();
 
-                    System.out.println(TerminalColors.ANSI_PURPLE + "USR: " + user_name + " issued a pull request!" + TerminalColors.ANSI_RESET);
-                    synchronized (this.topics) {
-                        for (Topic t : this.topics.values()) {
-                            if (t.isSubbed(user_name)) {
-                                unreads.put(t.getName(), t.getLatestFor(user_name));
+                        this.out.writeUTF(topic.getName());
+                        this.out.flush();
+
+
+                        synchronized (topic){
+                            for(String sub : topic.getSubscribers()){
+                                // Send subscriber name
+                                this.out.writeInt(1); // expect sub name
+                                this.out.flush();
+
+                                this.out.writeUTF(sub);
+                                this.out.flush();
                             }
                         }
                     }
 
-                    for (String topic_name : unreads.keySet())
-                        for (Value v : unreads.get(topic_name))
-                            this.send(topic_name, v);
-
-                    this.out.writeUTF("---");
+                    this.out.writeInt(-1); // end of briefing
                     this.out.flush();
+
                 }else if(request.equals("QUIT")){
                     System.out.println(this.frsReqSocket+" is finished.");
                     request = null;

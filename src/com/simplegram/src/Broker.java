@@ -154,13 +154,11 @@ public class Broker {
      */
     public void startBroker() throws IOException {
 
+        this.frsController.startFaultRecoverySystem();
         // Start IBC service.
         this.startInterBrokerCommunication();
         StoryChecker sc = new StoryChecker(this.topics);
         sc.start();
-
-        this.frsController.startFaultRecoveryService();
-
         // Start CBT service. -- WARNING, while-true loop in startCBT.
         this.startCommunicationBetweenTerminals();
     }
