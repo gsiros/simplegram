@@ -200,6 +200,8 @@ public class UserHandler extends Thread {
                         for (Topic t : this.topics.values()) {
                             if (t.isSubbed(user_name) && t.getAssignedBrokerID() == this.parentBroker.getBrokerID()) {
                                 unreads.put(t.getName(), t.getLatestFor(user_name));
+                            } else if(t.isSubbed(user_name)){
+                                t.getLatestFor(user_name);
                             }
                         }
                     }
