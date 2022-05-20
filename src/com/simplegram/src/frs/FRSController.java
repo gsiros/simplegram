@@ -87,14 +87,8 @@ public class FRSController {
     public void startFaultRecoverySystem(){
 
         // Request TMZ Briefing
-        int random_index = new Random().nextInt(this.brokerAddresses.size());
-        BrokerConnection randomBrokerConnection = this.brokerConnections.get(this.brokerAddresses.get(random_index));
-        while(!randomBrokerConnection.isActive()){
-            random_index = new Random().nextInt(this.brokerAddresses.size());
-            randomBrokerConnection = this.brokerConnections.get(this.brokerAddresses.get(random_index));
-        }
-        PullHandler pullHandler = new PullHandler(randomBrokerConnection, this.topics);
-        pullHandler.start(); //THIS THREAD MUST FINISH BEFORE OTHERS ARE CREATED.
+        PullHandler pullHandler = new PullHandler(this.brokerConnections, this.topics);
+        pullHandler.run(); //THIS THREAD MUST FINISH BEFORE OTHERS ARE CREATED.
 
         try {
             Thread.sleep(5000);
@@ -527,15 +521,15 @@ public class FRSController {
     class PullHandler extends SubscriberHandler {
 
         HashMap<String, Topic> topics;
-        BrokerConnection brokerConnection;
+        HashMap<InetAddress, BrokerConnection> brokerConnections;
 
         public PullHandler(
-                BrokerConnection brokerConnection,
+                HashMap<InetAddress, BrokerConnection> brokerConnections,
                 HashMap<String, Topic> topics
         ) {
             super(null);
             this.topics = topics;
-            this.brokerConnection = brokerConnection;
+            this.brokerConnections = brokerConnections;
         }
 
         /**
@@ -545,60 +539,83 @@ public class FRSController {
         @Override
         public void run() {
 
-            //if(brokerConnection.isActive()){
-            try {
-                String brokerIp = this.brokerConnection.getBrokerAddress().toString().split("/")[1];
-                this.frsSocket = new Socket();
-                this.frsSocket.connect(new InetSocketAddress(brokerIp, 5002), 3000);
-                this.frsOut = new ObjectOutputStream(frsSocket.getOutputStream());
-                this.frsIn = new ObjectInputStream(frsSocket.getInputStream());
-                int reply = Integer.MIN_VALUE; // reply option
-                String topicname = null;
-                // Send request:
-                this.frsOut.writeUTF("PULL");
-                this.frsOut.flush();
+            boolean requestComplete = false;
+            int brokerID = (int) (Math.random() * (this.brokerConnections.size()));
+            InetAddress brokerAddress = null;
 
-                while(reply != -1){
-                    reply = this.frsIn.readInt();
-                    if(reply == 0){
-                        // Create new topic.
-                        topicname = this.frsIn.readUTF();
-                        synchronized (this.topics){
-                            if(!this.topics.keySet().contains(topicname)){
-                                this.topics.put(topicname, new Topic(topicname));
-                            }
-                        }
-                    } else if(reply == 1){
-                        String sub_name = this.frsIn.readUTF();
-                        Topic topic = this.topics.get(topicname);
-                        synchronized (topic){
-                            if(!topic.isSubbed(sub_name)){
-                                topic.addUser(sub_name);
-                            }
-                        }
+            while(!requestComplete) {
+                //if(brokerConnection.isActive()){
+
+                synchronized (this.brokerConnections){
+                    for(BrokerConnection bc : this.brokerConnections.values()){
+                        if(bc.getBrokerID() == brokerID)
+                            brokerAddress = bc.getBrokerAddress();
                     }
                 }
 
-            } catch(SocketTimeoutException ste) {
-                // TODO: Fault tolerance? Might not make it in the final version.
+                try {
+
+                    if(brokerAddress == null){
+                        throw new ConnectException();
+                    }
+
+                    String brokerIp = brokerAddress.toString().split("/")[1];
+                    this.frsSocket = new Socket();
+                    this.frsSocket.connect(new InetSocketAddress(brokerIp, 5002), 3000);
+                    this.frsOut = new ObjectOutputStream(frsSocket.getOutputStream());
+                    this.frsIn = new ObjectInputStream(frsSocket.getInputStream());
+                    int reply = Integer.MIN_VALUE; // reply option
+                    String topicname = null;
+                    // Send request:
+                    this.frsOut.writeUTF("PULL");
+                    this.frsOut.flush();
+
+                    while (reply != -1) {
+                        reply = this.frsIn.readInt();
+                        if (reply == 0) {
+                            // Create new topic.
+                            topicname = this.frsIn.readUTF();
+                            synchronized (this.topics) {
+                                if (!this.topics.keySet().contains(topicname)) {
+                                    this.topics.put(topicname, new Topic(topicname));
+                                }
+                            }
+                        } else if (reply == 1) {
+                            String sub_name = this.frsIn.readUTF();
+                            Topic topic = this.topics.get(topicname);
+                            synchronized (topic) {
+                                if (!topic.isSubbed(sub_name)) {
+                                    topic.addUser(sub_name);
+                                }
+                            }
+                        }
+                    }
+
+                    requestComplete = true;
+
+                } catch (SocketTimeoutException ste) {
+                    // TODO: Fault tolerance? Might not make it in the final version.
+                    System.out.println("Broker unavailable, trying another...");
+                    brokerID = (brokerID + 1) % this.brokerConnections.size();
                 /*synchronized (brokerConnection){
                     brokerConnection.setDead();
                 }*/
-                System.out.println("PULL FAIL: Broker #" + brokerConnection.getBrokerID()+" (" + brokerConnection.getBrokerAddress().toString()+") might be dead...");
-            }catch (Exception e) {
-                //e.printStackTrace();
-            } finally {
-                try{
-                    if(this.frsIn!=null)
-                        this.frsIn.close();
-                    if(this.frsOut!=null)
-                        this.frsOut.close();
-                    if(this.frsSocket != null)
-                        if (!this.frsSocket.isClosed()){
-                            this.frsSocket.close();
-                        }
-                }catch (IOException e){
+                    //System.out.println("PULL FAIL: Broker #" + brokerConnection.getBrokerID() + " (" + brokerConnection.getBrokerAddress().toString() + ") might be dead...");
+                } catch (Exception e) {
                     //e.printStackTrace();
+                } finally {
+                    try {
+                        if (this.frsIn != null)
+                            this.frsIn.close();
+                        if (this.frsOut != null)
+                            this.frsOut.close();
+                        if (this.frsSocket != null)
+                            if (!this.frsSocket.isClosed()) {
+                                this.frsSocket.close();
+                            }
+                    } catch (IOException e) {
+                        //e.printStackTrace();
+                    }
                 }
             }
             //}
