@@ -94,7 +94,13 @@ public class FRSController {
             randomBrokerConnection = this.brokerConnections.get(this.brokerAddresses.get(random_index));
         }
         PullHandler pullHandler = new PullHandler(randomBrokerConnection, this.topics);
-        pullHandler.run(); //THIS THREAD MUST FINISH BEFORE OTHERS ARE CREATED.
+        pullHandler.start(); //THIS THREAD MUST FINISH BEFORE OTHERS ARE CREATED.
+
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
 
         FRService frs = new FRService(this.brokerAddresses, this.topics);
         frs.start();
