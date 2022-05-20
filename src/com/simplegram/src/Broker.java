@@ -39,7 +39,6 @@ public class Broker {
         this.topics = new HashMap<String, Topic>();
         this.brokerAddresses = new ArrayList<InetAddress>();
         this.brokerConnections = new HashMap<InetAddress,BrokerConnection>();
-        this.frsController = new FRSController(this.topics, this.brokerAddresses, this.brokerConnections);
     }
 
     /**
@@ -66,6 +65,7 @@ public class Broker {
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
+        this.frsController = new FRSController(this.topics, this.brokerAddresses, this.brokerConnections);
     }
 
     /**
