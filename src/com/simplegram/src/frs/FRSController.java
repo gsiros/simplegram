@@ -86,18 +86,17 @@ public class FRSController {
     
     public void startFaultRecoverySystem(){
 
+        FRService frs = new FRService(this.brokerAddresses, this.topics);
+        frs.start();
+
         // Request TMZ Briefing
         PullHandler pullHandler = new PullHandler(this.brokerConnections, this.topics);
         pullHandler.run(); //THIS THREAD MUST FINISH BEFORE OTHERS ARE CREATED.
-
         try {
             Thread.sleep(5000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
-        FRService frs = new FRService(this.brokerAddresses, this.topics);
-        frs.start();
 
         for(BrokerConnection brc : this.brokerConnections.values()){
             ArrayList<Thread> outgoings = this.outgoingRequests.get(brc.getBrokerAddress());
