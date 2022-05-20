@@ -90,16 +90,16 @@ public class FRSController {
         frs.start();
 
         // Request TMZ Briefing
-        PullHandler pullHandler = new PullHandler(this.brokerConnections, this.topics);
-        pullHandler.run(); //THIS THREAD MUST FINISH BEFORE OTHERS ARE CREATED.
-        try {
+        //PullHandler pullHandler = new PullHandler(this.brokerConnections, this.topics);
+        //pullHandler.run(); //THIS THREAD MUST FINISH BEFORE OTHERS ARE CREATED.
+        /*try {
             Thread.sleep(5000);
         } catch (InterruptedException e) {
             e.printStackTrace();
-        }
+        }*/
 
-        for(BrokerConnection brc : this.brokerConnections.values()){
-            ArrayList<Thread> outgoings = this.outgoingRequests.get(brc.getBrokerAddress());
+        for(InetAddress ie : this.brokerConnections.keySet()){
+            ArrayList<Thread> outgoings = this.outgoingRequests.get(ie);
             OutgoingScheduler outgoingDispatcher = new OutgoingScheduler(outgoings);
             outgoingDispatcher.start();
         }
