@@ -278,7 +278,8 @@ public class UserHandler extends Thread {
                          mf2send.getSentFrom(),
                          mf2send.getFilename(),
                          chunks.size(),
-                         new ArrayList<byte[]>() // empty file
+                         new ArrayList<byte[]>(), // empty file
+                         mf2send.getType()
                  );
              } else {
                  mf2send_empty = new MultimediaFile(
@@ -286,7 +287,8 @@ public class UserHandler extends Thread {
                          mf2send.getSentFrom(),
                          mf2send.getFilename(),
                          chunks.size(),
-                         new ArrayList<byte[]>() // empty file
+                         new ArrayList<byte[]>(), // empty file
+                         mf2send.getType()
                  );
              }
 
