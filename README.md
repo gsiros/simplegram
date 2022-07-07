@@ -3,6 +3,8 @@ A simple distributed messenger app.
 
 Authors; [Georgios E. Syros](https://github.com/gsiros "Georgios E. Syros"), [Anastasios Toumazatos](https://github.com/toumazatos "Anastasios Toumazatos"), [Nikos Christodoulou](https://github.com/nikos-christodoulou "Nikos Christodoulou"), [Evgenios Gkritsis](https://github.com/eGkritsis "Evgenios Gkritsis")
 
+Collaborators; [Fotios Bistas](https://github.com/FotiosBistas "Fotios Bistas") 
+
 ## Introduction
 
 The objective was to develop a communication system that supports multimedia content in Java. Text, photo or video content is published by one or more users and is delivered to a set of one or more subscribers. Due to the large amount of users that we want to serve, we implemented a clever system that is capable of content delivery to the correct receivers. 
