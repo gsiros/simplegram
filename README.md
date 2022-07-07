@@ -14,6 +14,12 @@ In order to distribute the content, we need to know:
 - **how how can they express interest** (_topic subscription_) and
 - **how can they receive it**.
 
+## Architecture
+
+The system is divided in two parts:
+- Multimedia Streaming Framework
+- [Front End Android App](https://github.com/gsiros/simplegram-app "Front End Android App")
+
 ## Event Delivery System
 
 This repoisotory accommodates the implementation of the multimedia streaming framework (_Event Delivery System_) which is responsible to support the forwarding and receiving (_streaming_) of multimedia conent. 
