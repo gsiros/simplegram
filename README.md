@@ -3,20 +3,20 @@ A simple distributed messenger app.
 
 Authors; [Georgios E. Syros](https://github.com/gsiros "Georgios E. Syros"), [Anastasios Toumazatos](https://github.com/toumazatos "Anastasios Toumazatos"), [Nikos Christodoulou](https://github.com/nikos-christodoulou "Nikos Christodoulou"), [Evgenios Gkritsis](https://github.com/eGkritsis "Evgenios Gkritsis")
 
-## Introdction
+## Introduction
 
 The objective was to develop a communication system that supports multimedia content in Java. Text, photo or video content is published by one or more users and is delivered to a set of one or more subscribers. Due to the large amount of users that we want to serve, we implemented a clever system that is capable of content delivery to the correct receivers. 
 
 In order to distribute the content, we need to know: 
-- **who is intersted** (_subscribers_)
+- **who is interested** (_subscribers_)
 - **how how can they express interest** (_topic subscription_) and
 - **how can they receive it**.
 
 ## Event Delivery System
 
-This repoisotory accomodates the implementation of the multimedia streaming framework (_Event Delivery System_) which is responsible to support the forwarding and receiving (_streaming_) of multimedia conent. 
+This repoisotory accommodates the implementation of the multimedia streaming framework (_Event Delivery System_) which is responsible to support the forwarding and receiving (_streaming_) of multimedia conent. 
 
-The Event Delivery System is a programming framework that allows sending and receiving data that fulfil specific criteria. The advantage of the Event Delivery System is the immediate forwarding of data in real time via two fundamental functions; `push` and `pull`. These two functions are independent of each other. 
+The Event Delivery System is a programming framework that allows sending and receiving data that fulfill specific criteria. The advantage of the Event Delivery System is the immediate forwarding of data in real time via two fundamental functions; `push` and `pull`. These two functions are independent of each other. 
 
 During each `push` call, the intermediate system node (_broker_) should;
 - **be able to handle data incoming from different _publishers_ concurrently** (in our case users) and
@@ -38,7 +38,7 @@ A brief description follows.
 
 ### - `push`
 
-The sole role of the `push` function is to forward to a _broker_ a value which is stored in a data structure (e.g. queue), so that the value can be delivered upon requested. This intermediate data structure plays the role of the topic's _chat history_. As a result, once a new user subscribes to the topic, they will be able to see the previous messages. In our case, `push` takes as input the information required for the immaculate delievery of the content (ex. _username, topic name/id, video data, etc._). 
+The sole role of the `push` function is to forward to a _broker_ a value which is stored in a data structure (e.g. queue), so that the value can be delivered upon requested. This intermediate data structure plays the role of the topic's _chat history_. As a result, once a new user subscribes to the topic, they will be able to see the previous messages. In our case, `push` takes as input the information required for the immaculate delivery of the content (ex. _username, topic name/id, video data, etc._). 
 
 A significant software requirement that needs to be addressed for better comprehension of the model's functionality is **multimedia chunking**; a photo or a video streamed to and from the framework is *never sent wholly*. On the contrary, multimedia content is cut down to smaller, equal in size, fragments (_chunks_) in order to achieve higher communication efficiency[^1].
 
