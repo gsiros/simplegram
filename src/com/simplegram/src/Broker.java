@@ -1,292 +1,157 @@
 package com.simplegram.src;
 
+import com.simplegram.src.MD5.MD5;
+import com.simplegram.src.cbt.UserHandler;
+import com.simplegram.src.ibc.BrokerConnection;
+import com.simplegram.src.ibc.ReceiveHandler;
+import com.simplegram.src.ibc.SendHandler;
+
 import java.io.*;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.math.BigInteger;
+import java.net.*;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Scanner;
 
 public class Broker {
-
-    private HashMap<Integer, BrokerHandler> brokers; // list of broker connections
-
-    private ArrayList<SubscriberHandler> connectedSubscribers;
-    private ArrayList<PublisherHandler> connectedPublishers;
+    // variable to store Broker ID.
+    private int brokerID;
+    // Data structure to hold all the topics
+    // that the broker is responsible for.
+    // ex. topics['topic_name'] -> Topic()
     private HashMap<String, Topic> topics;
-    private HashMap<String, ArrayList<Value>> messageQueue; //messages to be sent <topicname, message>
-    private boolean daemon;
-
-    private ServerSocket pubServiceProviderSocket;
-    private ServerSocket subServiceProviderSocket;
-    private ServerSocket brokerServiceProviderSocket;
-
-    private Socket userConnection;
-
-    public Broker() {
-    }
-
-    public void createTopic(String topicName) {
-        Topic topic = new Topic();
-        topics.put(topicName, topic);
-    }
-
-    public void removeTopic(String topicName) {
-        topics.remove(topicName);
-    }
 
 
-    public void startBroker() {
-        this.brokers = new HashMap<Integer, BrokerHandler>();
-        this.connectedPublishers = new ArrayList<PublisherHandler>();
-        this.connectedSubscribers = new ArrayList<SubscriberHandler>();
+    // IBC (InterBroker Communication) protocol
+    private DatagramSocket ibcSocket;
+    private ArrayList<InetAddress> brokerAddresses;
+    private HashMap<InetAddress, BrokerConnection> brokerConnections;
+
+
+    // CBT (Communication Between Terminals) protocol
+    private ServerSocket cbtSocket;
+
+    public Broker(String brokers_addr_file){
+        // Initialization of data structures:
         this.topics = new HashMap<String, Topic>();
-        this.messageQueue = new HashMap<String, ArrayList<Value>>();
-        this.daemon = true;
+        this.brokerAddresses = new ArrayList<InetAddress>();
+        this.brokerConnections = new HashMap<InetAddress,BrokerConnection>();
+        // Initialization of broker connections from file:
+        readBrokers(brokers_addr_file);
+    }
 
+    /**
+     * This method reads the ID and IP address for every broker
+     * node in the system.
+     * @param filename - the path of the configuration file.
+     * @return Nothing.
+     */
+    private void readBrokers(String filename){
+        File f = new File(filename);
         try {
-            BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
-            //System.out.println("Give port number(Client Server): ");
-            //int port = Integer.parseInt(input.readLine());
-            //userServiceProviderSocket = new ServerSocket(port);
-
-            // for now:
-            pubServiceProviderSocket = new ServerSocket(5000);
-            subServiceProviderSocket = new ServerSocket(5001);
-
-            System.out.println("Give port number(Broker Communication)");
-            int port = Integer.parseInt(input.readLine());
-            brokerServiceProviderSocket = new ServerSocket(port);
-
-            for (int i = 1; i <= 2; i++) {
-                System.out.println("Give IP for Broker " + i + ":");
-                String ip = input.readLine();
-                System.out.println("Give port number for Broker " + i + ":");
-                port = Integer.parseInt(input.readLine());
-
-                BrokerHandler brokerHandler = new BrokerHandler(new Socket(ip, port));
-                Thread brokerHandlerThread = new Thread(brokerHandler);
-                brokers.put(i, brokerHandler);
-                brokerHandlerThread.start();
-            }
-
-            //TODO: start pub and sub services..
-            //Publisher Service
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try{
-                        //accept incoming connections
-                        while(daemon) {
-                            Socket userSocket = pubServiceProviderSocket.accept();
-                            System.out.println(userSocket + "connected.");
-
-                            PublisherHandler handler = new PublisherHandler(userSocket);
-                            Thread thread = new Thread(handler);
-                            connectedPublishers.add(handler);
-                        }
-                    }catch (IOException e){
-
-                    }
-
+            Scanner sc = new Scanner(f);
+            while(sc.hasNextLine()){
+                String line = sc.nextLine();
+                String[] data = line.split(",");
+                if (data[1].equals("localhost")){
+                    this.brokerID = Integer.parseInt(data[0]);
+                }else {
+                    InetAddress ia = InetAddress.getByName(data[1]);
+                    this.brokerAddresses.add(ia);
+                    this.brokerConnections.put(ia, new BrokerConnection(Integer.parseInt(data[0]), ia));
                 }
-            }).start();
-
-            //Subscriber Service
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try{
-                        //accept incoming connections
-                        while(daemon) {
-                            Socket userSocket = subServiceProviderSocket.accept();
-                            System.out.println(userSocket + "connected.");
-
-                            SubscriberHandler handler = new SubscriberHandler(userSocket);
-                            Thread thread = new Thread(handler);
-                            connectedSubscribers.add(handler);
-                        }
-                    }catch (IOException e){
-
-                    }
-
-                }
-            }).start();
-
-        } catch (Exception E) {
-            //
-        }
-
-
-    }
-
-    // delete se ligo
-    // begin the main functionality,
-    // start accepting connections.
-    /*
-    void start(){
-        try {
-
-            // User listening on port 4444
-            userServiceProviderSocket = new ServerSocket(4444);
-            // Broker listening on port 4445
-            brokerServiceProviderSocket = new ServerSocket(4445);
-
-            while (true) {
-
-                // TODO: HANDLE CONNECTIONS; PART 1
-                brokerConnection = brokerServiceProviderSocket.accept();
-                Thread t_b = new ActionsForBroker(brokerConnection);
-                t_b.start();
-
-
-                // TODO: HANDLE CONNECTIONS; PART 2
-                // Accept incoming connection FROM USERNODE.
-                userConnection = userServiceProviderSocket.accept();
-                Thread t = new ActionsForUser(userConnection);
-                t.start();
-
             }
-        } catch (IOException ioException) {
-            ioException.printStackTrace();
-        } finally {
-            try {
-                userServiceProviderSocket.close();
-            } catch (IOException ioException) {
-                ioException.printStackTrace();
-            }
-        }
-    }
-    */
-    
-
-
-/*
-TODO: pull method
-
-    public void pull(String topicName) { //update all subscribers of Topic("topicName")
-        Topic topic = topics.get(topicName);
-        for (UserNode usrNode : topic.getSubscribers()){
-            int lastMsgIndex = connectedSubscribers.get(connectedSubscribers.indexOf(usrNode)).getMessageLists().get(topicName).size(); // ask the user for the index of the latest message in the user's msgQueue on said topic
-            while (lastMsgIndex <= topic.getMessageQueue().size()){
-                Value msg = topic.getMessageQueue().get(lastMsgIndex);//message to be delivered
-                //send msg to user
-                //ask for new messageListSize and repeat loop
-            }
-        }
-    }
-*/
-
-    class PublisherHandler implements Runnable{//actions for Server
-
-        private Socket client;
-        private DataOutputStream out;
-        private DataInputStream in;
-
-        public PublisherHandler(Socket client){
-            this.client = client;
-        }
-
-        @Override
-        public void run() {
-            try{
-                in = new DataInputStream(client.getInputStream());
-                out = new DataOutputStream(client.getOutputStream());
-                out.writeUTF("Connection Established. Enter a request...");
-                out.flush();
-                String request;
-                while (!client.isClosed()){
-                    request = in.readUTF();
-                    if(request == null){
-                        ;//do nothing
-                    }else if(request.equals("send")){
-                        receiveFile();
-                        out.writeUTF("File Received!");
-                        request = null;
-                        out.writeUTF("Anything else?");
-                        out.flush();
-                    }else if(request.equals("quit")){
-                        System.out.println(client+" is finished.");
-                        request = null;
-                        shutdown();
-                    }
-                }
-            }catch (Exception e){
-                e.printStackTrace();
-            }
-        }
-
-        private void receiveFile() throws Exception{//data transfer with chunking
-            int bytes = 0;
-            long size = in.readLong();// read file size
-            String title = in.readUTF();// read file name
-            //String type = title.substring(title.lastIndexOf('.'+1));//determine data type
-
-            FileOutputStream fileOutputStream = new FileOutputStream(title);
-            byte[] buffer = new byte[512*1024]; //512 * 2^10 (512KByte chunk size)
-            while (size > 0 && (bytes = in.read(buffer, 0, (int)Math.min(buffer.length, size))) != -1) {
-                fileOutputStream.write(buffer,0,bytes);
-                size -= bytes;      // read upto file size
-            }
-            fileOutputStream.close();
-            System.out.println("Received file: "+title);
-        }
-
-        public void shutdown(){
-            try {
-                in.close();
-                out.close();
-                if(!client.isClosed()){
-                    client.close();
-                }
-            }catch (Exception e){
-                //
-            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
         }
     }
 
-    class SubscriberHandler implements Runnable{
+    /**
+     * This method is used to hash the name of the topic and
+     * assign it to one of the available brokers on the network
+     * leveraging modular arithmetic.
+     * @param topicName - the name of the topic in string format.
+     * @return id of responsible broker.
+     */
+    public int getAssignedBroker(String topicName){
+        String hashedInput = MD5.hash(topicName);
+        BigInteger topicDec = new BigInteger(hashedInput,16);
 
-        private Socket client;
-        private DataOutputStream out;
-        private DataInputStream in;
+        //we use modulo 3, because we will have 3 brokers.
+        //we need to spread the topics equally to the brokers.
+        int brokerToAssign = topicDec.mod(BigInteger.valueOf(this.brokerConnections.size()+1)).intValue();
 
-        public SubscriberHandler(Socket client){
-            this.client = client;
-        }
+        //TODO: fault tolerance?
+        return brokerToAssign;
+    }
 
-        @Override
-        public void run() {
-            try{
-                in = new DataInputStream(client.getInputStream());
-                out = new DataOutputStream(client.getOutputStream());
 
-            }catch(Exception e){
-                e.printStackTrace();
-            }
 
-        }
-        public void shutdown(){
-            try {
-                in.close();
-                out.close();
-                if(!client.isClosed()){
-                    client.close();
-                }
-            }catch (Exception e){
-                //
-            }
+    /**
+     * This method is used to start the IBC (InterBroker Communication)
+     * service. It binds the service's UDP socket on port 4444 and starts
+     * the threads responsible for handling incoming 'ALIVE' messages from
+     * other brokers. Finally, it starts a daemon thread that checks periodically
+     * if a broker is dead or alive.
+     *
+     * @throws SocketException
+     */
+    private void startInterBrokerCommunication() throws SocketException {
+        this.ibcSocket = new DatagramSocket(4444);
+
+        ConnectionChecker cc = new ConnectionChecker(this.brokerConnections);
+        cc.start();
+
+        ReceiveHandler rh = new ReceiveHandler(this.ibcSocket, this.brokerConnections);
+        rh.start();
+
+        for(InetAddress addr : this.brokerAddresses){
+            SendHandler sh = new SendHandler(this.ibcSocket, addr);
+            sh.start();
         }
     }
 
-    class BrokerHandler implements Runnable {
-        private Socket socket;
+    /**
+     * This method is used to start the CBT (Communication Between Terminals)
+     * service. It binds a TCP server socket on port 5001 and listens for incoming
+     * UserNode connections. If a connection is established, the method starts a
+     * 'UserHandler' thread to handle the UserNode request.
+     *
+     * @throws IOException
+     */
+    private void startCommunicationBetweenTerminals() throws IOException {
 
-        public BrokerHandler(Socket socket) {
-            this.socket = socket;
+        // Bind server tcp socket:
+        this.cbtSocket = new ServerSocket(5001);
+
+        while(true){
+            Socket userConSocket = this.cbtSocket.accept();
+            UserHandler uh = new UserHandler(this, userConSocket, this.topics);
+            uh.start();
         }
 
-        public void run() {
+    }
 
-        }
+    /**
+     * This method starts the two fundamental services (IBC & CBT) and starts
+     * a thread to check if a story has expired.
+     *
+     * @throws IOException
+     */
+    public void startBroker() throws IOException {
+
+        // Start IBC service.
+        this.startInterBrokerCommunication();
+        StoryChecker sc = new StoryChecker(this.topics);
+        sc.start();
+
+        // Start CBT service. -- WARNING, while-true loop in startCBT.
+        this.startCommunicationBetweenTerminals();
+    }
+
+    public int getBrokerID() {
+        return brokerID;
     }
 }

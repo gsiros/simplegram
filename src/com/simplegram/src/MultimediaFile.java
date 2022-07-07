@@ -1,65 +1,67 @@
 package com.simplegram.src;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 
+/**
+ * A 'MultimediaFile' class that contains all required information
+ * for a multimedia file message in a topic.
+ *
+ * Each chunk is represented as a byte array and all the chunks required to
+ * rebuild the multimedia file are stored in an arraylist data structure.
+ */
 public class MultimediaFile extends Value implements Serializable {
-    private String destinationDirectory;
-    private String sourceDirectory;
+
+
     private String filename;
-    private long fileSize;
-    private byte[] fileData;
-    private String status;
+    private int fileSize;
+    private ArrayList<byte[]> chunks;
+    private String type;
 
-    public String getDestinationDirectory() {
-        return destinationDirectory;
+    public MultimediaFile(
+            String sentFrom,
+            String filename,
+            int fileSize,
+            ArrayList<byte[]> chunks,
+            String type
+    ) {
+        super(sentFrom);
+        this.filename = filename;
+        this.fileSize = fileSize;
+        this.chunks = chunks;
+        this.fileSize = fileSize;
+        this.type = type;
     }
 
-    public void setDestinationDirectory(String destinationDirectory) {
-        this.destinationDirectory = destinationDirectory;
-    }
 
-    public String getSourceDirectory() {
-        return sourceDirectory;
-    }
-
-    public void setSourceDirectory(String sourceDirectory) {
-        this.sourceDirectory = sourceDirectory;
+    public MultimediaFile(LocalDateTime dateSent, String sentFrom, String filename, int fileSize, ArrayList<byte[]> chunks, String type) {
+        super(dateSent, sentFrom);
+        this.filename = filename;
+        this.fileSize = fileSize;
+        this.chunks = chunks;
+        this.fileSize = fileSize;
+        this.type = type;
     }
 
     public String getFilename() {
         return filename;
     }
 
-    public void setFilename(String filename) {
-        this.filename = filename;
-    }
-
-    public long getFileSize() {
+    public int getFileSize() {
         return fileSize;
     }
 
-    public void setFileSize(long fileSize) {
-        this.fileSize = fileSize;
+    public ArrayList<byte[]> getChunks() {
+        return chunks;
     }
 
-    public byte[] getFileData() {
-        return fileData;
+    public String getType(){
+        return this.type;
     }
 
-    public void setFileData(byte[] fileData) {
-        this.fileData = fileData;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public MultimediaFile() {
-        super();
+    @Override
+    public String toString() {
+        return this.filename;
     }
 }
-
